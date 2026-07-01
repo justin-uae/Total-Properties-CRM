@@ -1,0 +1,157 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum UserRole {
+  MASTER_ADMIN
+  MANAGER
+  SALES
+  RECEPTION
+  FINANCE
+  OPERATIONS
+  TENANT
+}
+
+enum UserStatus {
+  ACTIVE
+  SUSPENDED
+}
+
+enum PermissionAction {
+  VIEW
+  CREATE
+  EDIT
+  DELETE
+  EXPORT
+  APPROVE
+  EMAIL
+  FINANCE
+  SETTINGS
+}
+
+model User {
+  id                  String       @id @default(cuid())
+  name                String
+  email               String       @unique
+  passwordHash        String
+  role                UserRole     @default(SALES)
+  status              UserStatus   @default(ACTIVE)
+  mustChangePassword  Boolean      @default(true)
+  theme               String       @default("warm-sunset")
+  lastLoginAt         DateTime?
+  failedLoginCount    Int          @default(0)
+  lockedUntil         DateTime?
+  createdAt           DateTime     @default(now())
+  updatedAt           DateTime     @updatedAt
+  permissions         Permission[]
+  createdRecords      Record[]     @relation("CreatedBy")
+  assignedRecords     Record[]     @relation("AssignedTo")
+  auditLogs           AuditLog[]
+}
+
+model Permission {
+  id        String           @id @default(cuid())
+  userId    String
+  module    String
+  action    PermissionAction
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime         @default(now())
+
+  @@unique([userId, module, action])
+  @@index([module, action])
+}
+
+model Record {
+  id           String     @id @default(cuid())
+  module       String
+  title        String
+  status       String     @default("New")
+  source       String?
+  location     String?
+  data         Json
+  publicToken  String?    @unique
+  assignedToId String?
+  createdById  String?
+  viewedAt     DateTime?
+  viewCount    Int        @default(0)
+  dueAt        DateTime?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  assignedTo   User?      @relation("AssignedTo", fields: [assignedToId], references: [id])
+  createdBy    User?      @relation("CreatedBy", fields: [createdById], references: [id])
+  files        FileObject[]
+
+  @@index([module, status])
+  @@index([module, createdAt])
+  @@index([dueAt])
+}
+
+model FileObject {
+  id           String     @id @default(cuid())
+  recordId     String?
+  module       String
+  originalName String
+  storedName   String
+  mimeType     String
+  size         Int
+  isPrivate    Boolean    @default(true)
+  uploadedById String?
+  createdAt    DateTime   @default(now())
+  record       Record?    @relation(fields: [recordId], references: [id], onDelete: Cascade)
+
+  @@index([module])
+}
+
+model Setting {
+  key       String   @id
+  value     Json
+  updatedAt DateTime @updatedAt
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String?
+  action    String
+  module    String?
+  recordId  String?
+  ipAddress String?
+  userAgent String?
+  before    Json?
+  after     Json?
+  createdAt DateTime @default(now())
+  user      User?    @relation(fields: [userId], references: [id])
+
+  @@index([module, recordId])
+  @@index([createdAt])
+}
+
+model RateLimit {
+  id        String   @id @default(cuid())
+  key       String
+  bucket    String
+  count     Int      @default(1)
+  resetAt   DateTime
+  createdAt DateTime @default(now())
+
+  @@unique([key, bucket])
+}
+
+model AutomationQueue {
+  id          String   @id @default(cuid())
+  trigger     String
+  payload     Json
+  runAt       DateTime
+  status      String   @default("Pending")
+  attempts    Int      @default(0)
+  lastError   String?
+  createdAt   DateTime @default(now())
+  processedAt DateTime?
+
+  @@index([status, runAt])
+}
