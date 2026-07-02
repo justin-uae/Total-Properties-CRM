@@ -199,25 +199,24 @@ export function ModulePage({ slug }: { slug: string }) {
             <button onClick={() => setShowForm(false)} className="btn-secondary">Cancel</button>
           </div>
           <form onSubmit={save} className="grid gap-4 md:grid-cols-2">
-            <fieldset disabled={saving} className="contents">
             <div>
               <label className="label">Status</label>
-              <select className="input" value={form.status || ''} onChange={(e) => setForm({ ...form, status: e.target.value })}>
+              <select className="input" disabled={saving} value={form.status || ''} onChange={(e) => setForm({ ...form, status: e.target.value })}>
                 {module.statuses.map((s) => <option key={s} value={s}>{s}</option>)}
               </select>
             </div>
             {module.fields.map((field) => (
-              <div key={field.name} className={field.colSpan === 2 ? 'md:col-span-2' : ''}>
+              <div key={field.name} className={`min-w-0${field.colSpan === 2 ? ' md:col-span-2' : ''}`}>
                 <label className="label">{field.label}{field.required ? ' *' : ''}</label>
                 {field.type === 'textarea' ? (
-                  <textarea className="input min-h-28" value={form[field.name] || ''} onChange={(e) => setForm({ ...form, [field.name]: e.target.value })} required={field.required} placeholder={field.placeholder} />
+                  <textarea className="input min-h-28" disabled={saving} value={form[field.name] || ''} onChange={(e) => setForm({ ...form, [field.name]: e.target.value })} required={field.required} placeholder={field.placeholder} />
                 ) : field.type === 'select' ? (
-                  <select className="input" value={form[field.name] || ''} onChange={(e) => setForm({ ...form, [field.name]: e.target.value })} required={field.required}>
+                  <select className="input" disabled={saving} value={form[field.name] || ''} onChange={(e) => setForm({ ...form, [field.name]: e.target.value })} required={field.required}>
                     <option value="">Select...</option>
                     {field.options?.map((option) => <option key={option} value={option}>{option}</option>)}
                   </select>
                 ) : field.type === 'checkbox' ? (
-                  <label className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white p-3 text-sm"><input type="checkbox" checked={Boolean(form[field.name])} onChange={(e) => setForm({ ...form, [field.name]: e.target.checked })} /> Yes</label>
+                  <label className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white p-3 text-sm"><input type="checkbox" disabled={saving} checked={Boolean(form[field.name])} onChange={(e) => setForm({ ...form, [field.name]: e.target.checked })} /> Yes</label>
                 ) : field.type === 'file' ? (
                   (() => {
                     const val = form[field.name];
@@ -232,7 +231,7 @@ export function ModulePage({ slug }: { slug: string }) {
                           <FileText className="h-4 w-4 shrink-0 text-slate-400" />
                           <span className="min-w-0 flex-1 truncate text-sm font-medium text-slate-700">{ref.name}</span>
                           <a href={`/api/files/${ref.id}?download=true`} className="btn-secondary px-2 py-1 text-xs">Download</a>
-                          <button type="button" onClick={() => handleFileRemove(field.name, ref.id)} className="text-xs font-medium text-red-500 hover:text-red-700">Remove</button>
+                          <button type="button" disabled={saving} onClick={() => handleFileRemove(field.name, ref.id)} className="text-xs font-medium text-red-500 hover:text-red-700">Remove</button>
                         </div>
                       </div>
                     );
@@ -249,23 +248,22 @@ export function ModulePage({ slug }: { slug: string }) {
                           <p className="text-sm font-medium text-slate-600">Click to upload</p>
                           <p className="mt-0.5 text-xs text-slate-400">PDF, JPG, PNG, WebP — max 10 MB</p>
                         </div>
-                        <input type="file" className="sr-only" accept=".pdf,.jpg,.jpeg,.png,.webp,.gif"
+                        <input type="file" className="sr-only" accept=".pdf,.jpg,.jpeg,.png,.webp,.gif" disabled={saving}
                           onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFileUpload(field.name, f); }} />
                       </label>
                     );
                   })()
                 ) : (
-                  <input className="input" type={field.type === 'money' ? 'number' : field.type} step={field.type === 'money' ? '0.01' : undefined} value={form[field.name] || ''} onChange={(e) => setForm({ ...form, [field.name]: e.target.value })} required={field.required} placeholder={field.placeholder} />
+                  <input className="input" disabled={saving} type={field.type === 'money' ? 'number' : field.type} step={field.type === 'money' ? '0.01' : undefined} value={form[field.name] || ''} onChange={(e) => setForm({ ...form, [field.name]: e.target.value })} required={field.required} placeholder={field.placeholder} />
                 )}
               </div>
             ))}
             <div className="flex flex-col gap-2 sm:flex-row sm:justify-end md:col-span-2">
-              <button type="button" onClick={() => setShowForm(false)} className="btn-secondary w-full sm:w-auto">Cancel</button>
+              <button type="button" onClick={() => setShowForm(false)} disabled={saving} className="btn-secondary w-full sm:w-auto">Cancel</button>
               <button className="btn-primary flex w-full items-center justify-center gap-2 sm:w-auto sm:min-w-[120px]" disabled={saving}>
                 {saving ? <><Spinner size="sm" color="white" /><span>Saving...</span></> : `Save ${module.singular}`}
               </button>
             </div>
-            </fieldset>
           </form>
         </div>
       )}
