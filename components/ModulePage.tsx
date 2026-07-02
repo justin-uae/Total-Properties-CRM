@@ -3,7 +3,7 @@
 import { ModuleConfig, moduleMap } from '@/lib/modules';
 import { currency, fmtDate } from '@/lib/utils';
 import { Spinner } from '@/components/ui/Spinner';
-import { Download, Eye, FileText, Plus, RefreshCw, Trash2, Upload } from 'lucide-react';
+import { Download, Eye, FileText, Plus, RefreshCw, Send, Trash2, Upload } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 
 type RecordRow = {
@@ -68,6 +68,9 @@ export function ModulePage({ slug }: { slug: string }) {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState<Record<string, boolean>>({});
+  const [transferring, setTransferring] = useState<Record<string, boolean>>({});
+  const [confirmTransferRow, setConfirmTransferRow] = useState<RecordRow | null>(null);
+  const [transferError, setTransferError] = useState('');
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<RecordRow | null>(null);
   const [query, setQuery] = useState('');
@@ -157,6 +160,31 @@ export function ModulePage({ slug }: { slug: string }) {
     if (!confirm('Delete this record?')) return;
     await fetch(`/api/records/${id}`, { method: 'DELETE' });
     await load();
+  }
+
+  function transferToQuote(row: RecordRow) {
+    setTransferError('');
+    setConfirmTransferRow(row);
+  }
+
+  async function doTransfer() {
+    if (!confirmTransferRow) return;
+    const row = confirmTransferRow;
+    setTransferring((t) => ({ ...t, [row.id]: true }));
+    setTransferError('');
+    try {
+      const res = await fetch('/api/records/transfer', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ leadId: row.id })
+      });
+      const json = await res.json();
+      if (!res.ok) { setTransferError(json.message || 'Transfer failed'); return; }
+      setConfirmTransferRow(null);
+      await load();
+    } finally {
+      setTransferring((t) => ({ ...t, [row.id]: false }));
+    }
   }
 
   function exportCsv() {
@@ -292,6 +320,17 @@ export function ModulePage({ slug }: { slug: string }) {
                     </td>
                   ))}
                   <td className="px-5 py-4 whitespace-nowrap text-right">
+                    {module.slug === 'leads' && (
+                      <button
+                        onClick={() => transferToQuote(row)}
+                        disabled={row.status === 'Transferred to Quotation' || transferring[row.id]}
+                        title="Transfer to Quotation"
+                        className="mr-2 rounded-lg px-2 py-1 text-xs font-semibold text-blue-600 hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-40"
+                      >
+                        <Send className="inline h-3.5 w-3.5 mr-1" />
+                        {transferring[row.id] ? 'Transferring…' : 'Transfer to Quote'}
+                      </button>
+                    )}
                     <button onClick={() => startEdit(row)} className="mr-2 rounded-lg p-2 text-slate-500 hover:bg-slate-100"><Eye className="h-4 w-4" /></button>
                     <button onClick={() => remove(row.id)} className="rounded-lg p-2 text-red-500 hover:bg-red-50"><Trash2 className="h-4 w-4" /></button>
                   </td>
@@ -302,6 +341,46 @@ export function ModulePage({ slug }: { slug: string }) {
           </table>
         </div>
       </div>
+
+      {/* Transfer to Quotation confirmation modal */}
+      {confirmTransferRow && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => { if (!transferring[confirmTransferRow.id]) setConfirmTransferRow(null); }} />
+          <div className="relative w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 shadow-xl">
+            <div className="mb-1 flex h-11 w-11 items-center justify-center rounded-2xl bg-blue-50">
+              <Send className="h-5 w-5 text-blue-600" />
+            </div>
+            <h2 className="mt-3 text-lg font-bold">Transfer to Quotation</h2>
+            <p className="mt-1.5 text-sm text-slate-500">
+              A draft quotation will be created for <span className="font-semibold text-slate-700">{confirmTransferRow.title}</span> with this lead's details pre-filled. The lead status will be updated to <span className="font-semibold text-slate-700">Transferred to Quotation</span>.
+            </p>
+            {transferError && (
+              <p className="mt-3 rounded-xl bg-red-50 px-3 py-2 text-sm font-medium text-red-600">{transferError}</p>
+            )}
+            <div className="mt-5 flex flex-col gap-2 sm:flex-row sm:justify-end">
+              <button
+                type="button"
+                onClick={() => setConfirmTransferRow(null)}
+                disabled={transferring[confirmTransferRow.id]}
+                className="btn-secondary w-full sm:w-auto"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={doTransfer}
+                disabled={transferring[confirmTransferRow.id]}
+                className="btn-primary flex w-full items-center justify-center gap-2 sm:w-auto sm:min-w-[140px]"
+              >
+                {transferring[confirmTransferRow.id]
+                  ? <><Spinner size="sm" color="white" /><span>Transferring…</span></>
+                  : <><Send className="h-4 w-4" /><span>Transfer to Quote</span></>
+                }
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

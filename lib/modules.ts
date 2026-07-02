@@ -17,11 +17,9 @@ import {
   ShieldCheck,
   Bot,
   MessageCircle,
-  Phone,
   Mail,
   KeyRound,
   UserCheck,
-  Boxes,
   RefreshCcw,
   BellRing,
   Map,
@@ -88,8 +86,8 @@ export const modules: ModuleConfig[] = [
     group: 'Sales',
     description: 'Website form enquiries submitted from Total Business Centres websites.',
     icon: UserPlus,
-    defaultStatus: 'New',
-    statuses: ['New', 'Contacted', 'Converted', 'Spam', 'Closed'],
+    defaultStatus: 'Contacted',
+    statuses: ['New', 'Contacted', 'Quoted', 'Arrange for viewing', 'Closed'],
     tableFields: ['fullName', 'telephone', 'email', 'enquiry', 'source', 'status'],
     fields: [
       { name: 'fullName', label: 'Full Name', type: 'text', required: true },
@@ -98,7 +96,8 @@ export const modules: ModuleConfig[] = [
       { name: 'serviceType', label: 'Service Type', type: 'select', options: serviceTypes },
       { name: 'location', label: 'Location', type: 'text' },
       { name: 'source', label: 'Source', type: 'select', options: leadSources },
-      { name: 'enquiry', label: 'Enquiry', type: 'textarea', colSpan: 2 }
+      { name: 'enquiry', label: 'Enquiry', type: 'textarea', colSpan: 2 },
+      { name: 'remarks', label: 'Remarks', type: 'textarea', colSpan: 2 }
     ]
   },
   {
@@ -109,7 +108,7 @@ export const modules: ModuleConfig[] = [
     description: 'All telephone, WhatsApp, walk-in and converted website enquiries.',
     icon: Users,
     defaultStatus: 'New',
-    statuses: ['New', 'Contacted', 'Viewing Booked', 'Quotation Sent', 'Negotiation', 'Won', 'Lost'],
+    statuses: ['New', 'Contacted', 'Viewing Booked', 'Quotation Sent', 'Negotiation', 'Won', 'Lost', 'Transferred to Quotation'],
     tableFields: ['fullName', 'telephone', 'serviceType', 'source', 'nextFollowUp', 'status'],
     fields: [
       { name: 'fullName', label: 'Full Name', type: 'text', required: true },
@@ -121,9 +120,8 @@ export const modules: ModuleConfig[] = [
       { name: 'source', label: 'Lead Source', type: 'select', options: leadSources },
       { name: 'budget', label: 'Budget', type: 'money' },
       { name: 'moveInDate', label: 'Move-in Date', type: 'date' },
-      { name: 'nextFollowUp', label: 'Next Follow-up', type: 'datetime' },
+      { name: 'nextFollowUp', label: 'Next Follow-up', type: 'date' },
       { name: 'lostReason', label: 'Lost Reason', type: 'select', options: ['Price too high', 'Location not suitable', 'No availability', 'Chose competitor', 'No response', 'Looking later', 'Wrong enquiry', 'Duplicate enquiry'] },
-      { name: 'competitorName', label: 'Competitor Name', type: 'text' },
       { name: 'notes', label: 'Notes', type: 'textarea', colSpan: 2 }
     ]
   },
@@ -145,7 +143,8 @@ export const modules: ModuleConfig[] = [
       { name: 'location', label: 'Location', type: 'text' },
       { name: 'amount', label: 'Amount', type: 'money', required: true },
       { name: 'validUntil', label: 'Valid Until', type: 'date' },
-      { name: 'description', label: 'Proposal Details', type: 'textarea', colSpan: 2 }
+      { name: 'description', label: 'Proposal Details', type: 'textarea', colSpan: 2 },
+      { name: 'attachment', label: 'Attachment (PDF / Image)', type: 'file', colSpan: 2 }
     ]
   },
   {
@@ -157,34 +156,16 @@ export const modules: ModuleConfig[] = [
     icon: CalendarDays,
     defaultStatus: 'Booked',
     statuses: ['Booked', 'Completed', 'No Show', 'Cancelled', 'Followed Up'],
-    tableFields: ['clientName', 'serviceType', 'location', 'viewingAt', 'status'],
+    tableFields: ['clientName', 'serviceType', 'location', 'viewingDate', 'status'],
     fields: [
       { name: 'clientName', label: 'Client Name', type: 'text', required: true },
       { name: 'telephone', label: 'Telephone', type: 'tel' },
       { name: 'serviceType', label: 'Service Type', type: 'select', options: serviceTypes },
       { name: 'location', label: 'Location', type: 'text' },
-      { name: 'viewingAt', label: 'Viewing Date/Time', type: 'datetime', required: true },
+      { name: 'viewingDate', label: 'Viewing Date', type: 'date', required: true },
+      { name: 'viewingTime', label: 'Viewing Time', type: 'time', required: true },
       { name: 'staffMember', label: 'Staff Member', type: 'text' },
       { name: 'notes', label: 'Notes', type: 'textarea', colSpan: 2 }
-    ]
-  },
-  {
-    slug: 'call-logs',
-    title: 'Call Logs',
-    singular: 'Call Log',
-    group: 'Sales',
-    description: 'Track inbound/outbound calls, outcomes and next follow-ups.',
-    icon: Phone,
-    defaultStatus: 'Logged',
-    statuses: ['Logged', 'Follow-up Required', 'Completed'],
-    tableFields: ['personName', 'telephone', 'direction', 'outcome', 'nextFollowUp', 'status'],
-    fields: [
-      { name: 'personName', label: 'Person Name', type: 'text', required: true },
-      { name: 'telephone', label: 'Telephone', type: 'tel', required: true },
-      { name: 'direction', label: 'Direction', type: 'select', options: ['Inbound', 'Outbound'] },
-      { name: 'outcome', label: 'Outcome', type: 'select', options: ['Interested', 'Not Interested', 'Viewing Booked', 'Quotation Requested', 'No Answer', 'Call Back Later'] },
-      { name: 'nextFollowUp', label: 'Next Follow-up', type: 'datetime' },
-      { name: 'notes', label: 'Call Notes', type: 'textarea', colSpan: 2 }
     ]
   },
   {
