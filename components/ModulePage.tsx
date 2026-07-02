@@ -112,8 +112,26 @@ export function ModulePage({ slug }: { slug: string }) {
       alert((await res.json()).message || 'Save failed');
       return;
     }
+    if (!editing) {
+      const { record } = await res.json();
+      const fileRefs = Object.values(form).filter(isFileRef);
+      await Promise.allSettled(
+        fileRefs.map((ref) =>
+          fetch(`/api/files/${ref.id}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ recordId: record.id })
+          })
+        )
+      );
+    }
     setShowForm(false);
     await load();
+  }
+
+  async function handleFileRemove(fieldName: string, fileId: string) {
+    await fetch(`/api/files/${fileId}`, { method: 'DELETE' });
+    setForm((f) => ({ ...f, [fieldName]: null }));
   }
 
   async function handleFileUpload(fieldName: string, file: File) {
@@ -160,16 +178,16 @@ export function ModulePage({ slug }: { slug: string }) {
       <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div>
           <p className="text-sm font-bold uppercase tracking-widest text-[rgb(var(--accent))]">{module.group}</p>
-          <h1 className="mt-1 text-3xl font-black">{module.title}</h1>
+          <h1 className="mt-1 text-2xl font-black sm:text-3xl">{module.title}</h1>
           <p className="mt-2 max-w-3xl text-sm text-slate-500">{module.description}</p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <input value={query} onChange={(e) => setQuery(e.target.value)} className="input w-64" placeholder="Search records..." />
+          <input value={query} onChange={(e) => setQuery(e.target.value)} className="input w-full sm:w-64" placeholder="Search records..." />
           <button onClick={load} disabled={loading} className="btn-secondary flex items-center gap-2">
             <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-            Refresh
+            <span className="hidden sm:inline">Refresh</span>
           </button>
-          <button onClick={exportCsv} className="btn-secondary"><Download className="mr-2 inline h-4 w-4" />Export</button>
+          <button onClick={exportCsv} className="btn-secondary"><Download className="mr-2 inline h-4 w-4" /><span className="hidden sm:inline">Export</span></button>
           <button onClick={startCreate} className="btn-primary"><Plus className="mr-2 inline h-4 w-4" />Add {module.singular}</button>
         </div>
       </div>
@@ -214,7 +232,7 @@ export function ModulePage({ slug }: { slug: string }) {
                           <FileText className="h-4 w-4 shrink-0 text-slate-400" />
                           <span className="min-w-0 flex-1 truncate text-sm font-medium text-slate-700">{ref.name}</span>
                           <a href={`/api/files/${ref.id}?download=true`} className="btn-secondary px-2 py-1 text-xs">Download</a>
-                          <button type="button" onClick={() => setForm((f) => ({ ...f, [field.name]: null }))} className="text-xs font-medium text-red-500 hover:text-red-700">Remove</button>
+                          <button type="button" onClick={() => handleFileRemove(field.name, ref.id)} className="text-xs font-medium text-red-500 hover:text-red-700">Remove</button>
                         </div>
                       </div>
                     );
@@ -241,9 +259,9 @@ export function ModulePage({ slug }: { slug: string }) {
                 )}
               </div>
             ))}
-            <div className="md:col-span-2 flex justify-end gap-2">
-              <button type="button" onClick={() => setShowForm(false)} className="btn-secondary">Cancel</button>
-              <button className="btn-primary flex items-center gap-2 min-w-[120px] justify-center" disabled={saving}>
+            <div className="flex flex-col gap-2 sm:flex-row sm:justify-end md:col-span-2">
+              <button type="button" onClick={() => setShowForm(false)} className="btn-secondary w-full sm:w-auto">Cancel</button>
+              <button className="btn-primary flex w-full items-center justify-center gap-2 sm:w-auto sm:min-w-[120px]" disabled={saving}>
                 {saving ? <><Spinner size="sm" color="white" /><span>Saving...</span></> : `Save ${module.singular}`}
               </button>
             </div>
@@ -261,21 +279,21 @@ export function ModulePage({ slug }: { slug: string }) {
           <table className="w-full text-left text-sm">
             <thead className="bg-slate-50 text-xs uppercase text-slate-500">
               <tr>
-                <th className="px-5 py-3">Title</th>
-                {module.tableFields.map((field) => <th key={field} className="px-5 py-3">{field.replace(/([A-Z])/g, ' $1')}</th>)}
-                <th className="px-5 py-3 text-right">Actions</th>
+                <th className="px-5 py-3 whitespace-nowrap">Title</th>
+                {module.tableFields.map((field) => <th key={field} className="px-5 py-3 whitespace-nowrap">{field.replace(/([A-Z])/g, ' $1')}</th>)}
+                <th className="px-5 py-3 whitespace-nowrap text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {loading ? <TableSkeleton cols={module.tableFields.length} /> : filtered.map((row) => (
                 <tr key={row.id} className="hover:bg-slate-50/70">
-                  <td className="px-5 py-4 font-semibold">{row.title}<p className="text-xs font-normal text-slate-400">{new Date(row.createdAt).toLocaleString()}</p></td>
+                  <td className="px-5 py-4 whitespace-nowrap font-semibold">{row.title}<p className="text-xs font-normal text-slate-400">{new Date(row.createdAt).toLocaleString()}</p></td>
                   {module.tableFields.map((field) => (
-                    <td key={field} className="px-5 py-4">
+                    <td key={field} className="px-5 py-4 whitespace-nowrap">
                       {field === 'status' ? <span className="status-pill bg-orange-50 text-orange-700">{row.status}</span> : valueFor(row, field)}
                     </td>
                   ))}
-                  <td className="px-5 py-4 text-right">
+                  <td className="px-5 py-4 whitespace-nowrap text-right">
                     <button onClick={() => startEdit(row)} className="mr-2 rounded-lg p-2 text-slate-500 hover:bg-slate-100"><Eye className="h-4 w-4" /></button>
                     <button onClick={() => remove(row.id)} className="rounded-lg p-2 text-red-500 hover:bg-red-50"><Trash2 className="h-4 w-4" /></button>
                   </td>
@@ -308,7 +326,7 @@ function SystemModule({ module }: { module: ModuleConfig; }) {
     <div className="space-y-6">
       <div>
         <p className="text-sm font-bold uppercase tracking-widest text-[rgb(var(--accent))]">{module.group}</p>
-        <h1 className="mt-1 text-3xl font-black">{module.title}</h1>
+        <h1 className="mt-1 text-2xl font-black sm:text-3xl">{module.title}</h1>
         <p className="mt-2 max-w-3xl text-sm text-slate-500">{module.description}</p>
       </div>
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">

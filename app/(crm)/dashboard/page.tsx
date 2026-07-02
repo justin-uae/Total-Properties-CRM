@@ -37,12 +37,12 @@ export default async function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-orange-600 via-amber-500 to-rose-500 p-8 text-white shadow-soft">
+      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-orange-600 via-amber-500 to-rose-500 p-5 text-white shadow-soft sm:p-8">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(255,255,255,.25),transparent_35%)]" />
         <div className="relative">
-          <p className="text-sm font-semibold uppercase tracking-widest text-white/75">Total Business Centres CRM</p>
-          <h1 className="mt-2 text-3xl font-black tracking-tight">Good day — here is your business centre overview.</h1>
-          <p className="mt-2 max-w-3xl text-white/85">Manage enquiries, offices, meeting rooms, invoices, contracts, renewals, reception and operations from one dashboard.</p>
+          <p className="text-xs font-semibold uppercase tracking-widest text-white/75 sm:text-sm">Total Business Centres CRM</p>
+          <h1 className="mt-2 text-xl font-black tracking-tight sm:text-3xl">Good day — here is your business centre overview.</h1>
+          <p className="mt-2 hidden max-w-3xl text-sm text-white/85 sm:block">Manage enquiries, offices, meeting rooms, invoices, contracts, renewals, reception and operations from one dashboard.</p>
         </div>
       </div>
 
@@ -92,13 +92,27 @@ export default async function DashboardPage() {
         </div>
       </div>
 
-      <div className="card p-6">
+      <div className="card p-4 sm:p-6">
         <h2 className="text-lg font-bold">Recent CRM Activity</h2>
         <div className="mt-4 overflow-x-auto">
           <table className="w-full text-left text-sm">
-            <thead className="text-xs uppercase text-slate-500"><tr><th className="py-3">Record</th><th>Module</th><th>Status</th><th>Created</th></tr></thead>
+            <thead className="text-xs uppercase text-slate-500">
+              <tr>
+                <th className="px-3 py-3 whitespace-nowrap">Record</th>
+                <th className="px-3 py-3 whitespace-nowrap">Module</th>
+                <th className="px-3 py-3 whitespace-nowrap">Status</th>
+                <th className="px-3 py-3 whitespace-nowrap">Created</th>
+              </tr>
+            </thead>
             <tbody className="divide-y divide-slate-100">
-              {recent.map((row) => <tr key={row.id}><td className="py-3 font-semibold">{row.title}</td><td>{row.module.replaceAll('-', ' ')}</td><td>{row.status}</td><td>{row.createdAt.toLocaleString()}</td></tr>)}
+              {recent.map((row) => (
+                <tr key={row.id}>
+                  <td className="px-3 py-3 whitespace-nowrap font-semibold">{row.title}</td>
+                  <td className="px-3 py-3 whitespace-nowrap capitalize">{row.module.replaceAll('-', ' ')}</td>
+                  <td className="px-3 py-3 whitespace-nowrap"><span className="status-pill bg-orange-50 text-orange-700">{row.status}</span></td>
+                  <td className="px-3 py-3 whitespace-nowrap text-slate-500">{row.createdAt.toLocaleString()}</td>
+                </tr>
+              ))}
             </tbody>
           </table>
         </div>

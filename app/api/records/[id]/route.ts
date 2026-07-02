@@ -5,6 +5,7 @@ import { prisma } from '@/lib/db';
 import { auditLog } from '@/lib/audit';
 import { moduleMap } from '@/lib/modules';
 import { ipFromHeaders } from '@/lib/utils';
+import { deleteFile } from '@/lib/storage';
 
 function titleFor(module: string, data: any) {
   return data.fullName || data.companyName || data.clientName || data.visitorName || data.roomName || data.unitName || data.invoiceNumber || data.quoteNumber || data.contractNumber || data.ruleName || data.serviceName || `${module} record`;
@@ -87,7 +88,9 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
     return NextResponse.json({ message: 'Not found' }, { status: 404 });
   }
   await assertCan(before.module, PermissionAction.DELETE);
+  const attachedFiles = await prisma.fileObject.findMany({ where: { recordId: id } });
   await prisma.record.delete({ where: { id } });
+  await Promise.allSettled(attachedFiles.map((f) => deleteFile(f.storedName)));
   await auditLog({ userId: user.id, action: 'DELETE', module: before.module, recordId: id, ipAddress: ipFromHeaders(req.headers), before });
   return NextResponse.json({ ok: true });
 }

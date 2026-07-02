@@ -19,11 +19,11 @@ export function PublicMeetingRoomBooking() {
     </div>
   );
   return (
-    <form onSubmit={submit} className="mx-auto max-w-3xl rounded-3xl bg-white p-8 shadow-soft">
-      <h1 className="mt-2 text-3xl font-black">Book a Meeting Room</h1>
-      <p className="mt-2 text-slate-500">Choose your room, location, number of people and booking time.</p>
+    <form onSubmit={submit} className="mx-auto max-w-3xl rounded-2xl bg-white p-5 shadow-soft sm:rounded-3xl sm:p-8">
+      <h1 className="mt-2 text-2xl font-black sm:text-3xl">Book a Meeting Room</h1>
+      <p className="mt-2 text-sm text-slate-500">Choose your room, location, number of people and booking time.</p>
       {message && <div className="mt-6 rounded-2xl bg-orange-50 p-4 text-sm font-semibold text-orange-700">{message}</div>}
-      <div className="mt-8 grid gap-4 md:grid-cols-2">
+      <div className="mt-6 grid gap-4 sm:mt-8 md:grid-cols-2">
         {field('customerName', 'Full Name')}
         {field('telephone', 'Telephone', 'tel')}
         {field('email', 'Email', 'email')}
@@ -34,7 +34,7 @@ export function PublicMeetingRoomBooking() {
         {field('startTime', 'Start Time', 'time')}
         {field('endTime', 'End Time', 'time')}
       </div>
-      <button className="btn-primary mt-8 w-full py-3">Request Booking</button>
+      <button className="btn-primary mt-6 w-full py-3 sm:mt-8">Request Booking</button>
     </form>
   );
 }

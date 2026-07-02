@@ -26,12 +26,19 @@ body {
 }
 
 .card { @apply rounded-2xl border border-slate-200/70 bg-white/90 shadow-soft backdrop-blur dark:border-slate-700; background: rgba(var(--panel), .92); }
-.btn-primary { @apply rounded-xl px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:opacity-95; background: linear-gradient(135deg, rgb(var(--accent)), rgb(var(--accent-2))); }
-.btn-secondary { @apply rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50; }
-.input { @apply w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100; }
+.btn-primary { @apply rounded-xl px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:opacity-95 active:scale-95; background: linear-gradient(135deg, rgb(var(--accent)), rgb(var(--accent-2))); }
+.btn-secondary { @apply rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 active:scale-95; }
+.input { @apply w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none transition; }
+.input:focus { border-color: rgb(var(--accent) / 0.6); box-shadow: 0 0 0 3px rgb(var(--accent) / 0.12); }
 .label { @apply mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500; }
 .status-pill { @apply inline-flex rounded-full px-2.5 py-1 text-xs font-semibold; }
 .sidebar-link { @apply flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium transition; }
+
+/* Prevent iOS Safari from auto-zooming when an input is focused.
+   The zoom is triggered when font-size < 16px — this forces 16px on touch screens. */
+@media (max-width: 1024px) {
+  input, select, textarea { font-size: 16px; }
+}
 
 @keyframes shimmer {
   0% { background-position: -200% 0; }
