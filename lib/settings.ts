@@ -1,11 +1,11 @@
 import { prisma } from '@/lib/db';
 
 export const defaultSettings = {
-  companyName: 'Total Business Centres',
-  appName: 'Total Business Centres CRM',
+  companyName: '',
+  appName: '',
   defaultTheme: 'warm-sunset',
-  addressLocation1: 'Address Location 1',
-  addressLocation2: 'Address Location 2',
+  addressLocation1: '',
+  addressLocation2: '',
   stripeEnabled: false,
   stripePublishableKey: '',
   stripeSecretKey: '',

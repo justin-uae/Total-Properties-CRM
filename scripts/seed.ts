@@ -5,16 +5,22 @@ import { modules } from '../lib/modules';
 const prisma = new PrismaClient();
 
 async function main() {
+  const adminEmail = process.env.ADMIN_EMAIL;
+  const adminPassword = process.env.ADMIN_PASSWORD;
+  if (!adminEmail || !adminPassword) {
+    throw new Error('Set ADMIN_EMAIL and ADMIN_PASSWORD in your .env before seeding.');
+  }
+
   const admin = await prisma.user.upsert({
-    where: { email: 'admin@example.com' },
+    where: { email: adminEmail },
     update: {},
     create: {
       name: 'Master Admin',
-      email: 'admin@example.com',
+      email: adminEmail,
       role: 'MASTER_ADMIN',
       status: 'ACTIVE',
       theme: 'warm-sunset',
-      passwordHash: await bcrypt.hash('Admin123!', 12),
+      passwordHash: await bcrypt.hash(adminPassword, 12),
       mustChangePassword: true
     }
   });
@@ -30,11 +36,11 @@ async function main() {
   }
 
   const settings = {
-    companyName: 'Total Business Centres',
-    appName: 'Total Business Centres CRM',
+    companyName: process.env.COMPANY_NAME || '',
+    appName: process.env.APP_NAME || '',
     defaultTheme: 'warm-sunset',
-    addressLocation1: 'Address Location 1',
-    addressLocation2: 'Address Location 2',
+    addressLocation1: process.env.ADDRESS_LOCATION_1 || '',
+    addressLocation2: process.env.ADDRESS_LOCATION_2 || '',
     stripeEnabled: false,
     stripePublishableKey: '',
     stripeSecretKey: '',

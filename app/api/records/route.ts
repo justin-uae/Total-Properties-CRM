@@ -95,7 +95,8 @@ export async function POST(req: NextRequest) {
   }
 
   if (module === 'staff-users') {
-    const password = String(data.password || 'ChangeMe123!');
+    const password = String(data.password || '');
+    if (!password) return NextResponse.json({ message: 'Password is required for new staff users' }, { status: 400 });
     const role = data.role || 'SALES';
     const created = await prisma.user.create({
       data: {

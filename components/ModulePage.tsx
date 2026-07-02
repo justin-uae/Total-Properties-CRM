@@ -3,7 +3,7 @@
 import { ModuleConfig, moduleMap } from '@/lib/modules';
 import { currency, fmtDate } from '@/lib/utils';
 import { Spinner } from '@/components/ui/Spinner';
-import { Download, Eye, Plus, RefreshCw, Trash2 } from 'lucide-react';
+import { Download, Eye, FileText, Plus, RefreshCw, Trash2, Upload } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 
 type RecordRow = {
@@ -17,10 +17,17 @@ type RecordRow = {
   createdAt: string;
 };
 
+type FileRef = { id: string; name: string; mimeType: string };
+
+function isFileRef(v: unknown): v is FileRef {
+  return typeof v === 'object' && v !== null && 'id' in v && 'name' in v;
+}
+
 function valueFor(row: RecordRow, key: string) {
   if (key === 'status') return row.status;
   if (key === 'viewCount') return row.viewCount || 0;
   const value = row.data?.[key];
+  if (isFileRef(value)) return value.name;
   if (key.toLowerCase().includes('amount') || key.toLowerCase().includes('rate') || key.toLowerCase().includes('charge') || key === 'budget') return currency(value || 0);
   if (key.toLowerCase().includes('date') || key.toLowerCase().includes('at')) return fmtDate(value);
   if (typeof value === 'boolean') return value ? 'Yes' : 'No';
@@ -60,6 +67,7 @@ export function ModulePage({ slug }: { slug: string }) {
   const [rows, setRows] = useState<RecordRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState<Record<string, boolean>>({});
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<RecordRow | null>(null);
   const [query, setQuery] = useState('');
@@ -106,6 +114,25 @@ export function ModulePage({ slug }: { slug: string }) {
     }
     setShowForm(false);
     await load();
+  }
+
+  async function handleFileUpload(fieldName: string, file: File) {
+    setUploading((u) => ({ ...u, [fieldName]: true }));
+    try {
+      const fd = new FormData();
+      fd.append('file', file);
+      fd.append('module', module.slug);
+      if (editing) fd.append('recordId', editing.id);
+      const res = await fetch('/api/files/upload', { method: 'POST', body: fd });
+      let json: any = {};
+      try { json = await res.json(); } catch { /* non-JSON body */ }
+      if (!res.ok) { alert(json.message || `Upload failed (${res.status})`); return; }
+      setForm((f) => ({ ...f, [fieldName]: { id: json.file.id, name: json.file.originalName, mimeType: json.file.mimeType } }));
+    } catch (err: any) {
+      alert(err?.message || 'Upload failed');
+    } finally {
+      setUploading((u) => ({ ...u, [fieldName]: false }));
+    }
   }
 
   async function remove(id: string) {
@@ -174,7 +201,41 @@ export function ModulePage({ slug }: { slug: string }) {
                 ) : field.type === 'checkbox' ? (
                   <label className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white p-3 text-sm"><input type="checkbox" checked={Boolean(form[field.name])} onChange={(e) => setForm({ ...form, [field.name]: e.target.checked })} /> Yes</label>
                 ) : field.type === 'file' ? (
-                  <input className="input" type="file" onChange={(e) => setForm({ ...form, [field.name]: e.target.files?.[0]?.name || '' })} />
+                  (() => {
+                    const val = form[field.name];
+                    const ref = isFileRef(val) ? val : null;
+                    const isImg = ref?.mimeType?.startsWith('image/');
+                    const isPdf = ref?.mimeType === 'application/pdf';
+                    if (ref) return (
+                      <div className="overflow-hidden rounded-xl border border-slate-200 bg-slate-50">
+                        {isImg && <img src={`/api/files/${ref.id}`} alt={ref.name} className="max-h-52 w-full object-contain p-2" />}
+                        {isPdf && <iframe src={`/api/files/${ref.id}`} title={ref.name} className="h-52 w-full border-0" />}
+                        <div className="flex items-center gap-2 border-t border-slate-200 bg-white px-3 py-2">
+                          <FileText className="h-4 w-4 shrink-0 text-slate-400" />
+                          <span className="min-w-0 flex-1 truncate text-sm font-medium text-slate-700">{ref.name}</span>
+                          <a href={`/api/files/${ref.id}?download=true`} className="btn-secondary px-2 py-1 text-xs">Download</a>
+                          <button type="button" onClick={() => setForm((f) => ({ ...f, [field.name]: null }))} className="text-xs font-medium text-red-500 hover:text-red-700">Remove</button>
+                        </div>
+                      </div>
+                    );
+                    if (uploading[field.name]) return (
+                      <div className="flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 p-4">
+                        <Spinner size="sm" color="muted" />
+                        <span className="text-sm text-slate-500">Uploading…</span>
+                      </div>
+                    );
+                    return (
+                      <label className="flex cursor-pointer flex-col items-center gap-3 rounded-xl border-2 border-dashed border-slate-200 bg-slate-50 p-6 text-center transition hover:border-[rgb(var(--accent))]">
+                        <Upload className="h-7 w-7 text-slate-400" />
+                        <div>
+                          <p className="text-sm font-medium text-slate-600">Click to upload</p>
+                          <p className="mt-0.5 text-xs text-slate-400">PDF, JPG, PNG, WebP — max 10 MB</p>
+                        </div>
+                        <input type="file" className="sr-only" accept=".pdf,.jpg,.jpeg,.png,.webp,.gif"
+                          onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFileUpload(field.name, f); }} />
+                      </label>
+                    );
+                  })()
                 ) : (
                   <input className="input" type={field.type === 'money' ? 'number' : field.type} step={field.type === 'money' ? '0.01' : undefined} value={form[field.name] || ''} onChange={(e) => setForm({ ...form, [field.name]: e.target.value })} required={field.required} placeholder={field.placeholder} />
                 )}

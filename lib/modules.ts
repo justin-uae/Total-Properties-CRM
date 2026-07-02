@@ -58,7 +58,6 @@ export type ModuleConfig = {
 };
 
 export const serviceTypes = ['Virtual Office', 'Co Working Office', 'Private Office', 'Meeting Room'];
-export const locations = ['Address Location 1', 'Address Location 2'];
 export const leadSources = ['Website', 'Telephone', 'WhatsApp', 'Walk-in', 'Google Ads', 'SEO', 'Referral', 'Instagram', 'Facebook', 'Agent/Broker', 'Existing Customer'];
 export const themes = [
   { id: 'modern-blue', name: 'Modern Blue' },
@@ -97,7 +96,7 @@ export const modules: ModuleConfig[] = [
       { name: 'email', label: 'Email', type: 'email' },
       { name: 'telephone', label: 'Telephone', type: 'tel', required: true },
       { name: 'serviceType', label: 'Service Type', type: 'select', options: serviceTypes },
-      { name: 'location', label: 'Location', type: 'select', options: locations },
+      { name: 'location', label: 'Location', type: 'text' },
       { name: 'source', label: 'Source', type: 'select', options: leadSources },
       { name: 'enquiry', label: 'Enquiry', type: 'textarea', colSpan: 2 }
     ]
@@ -118,7 +117,7 @@ export const modules: ModuleConfig[] = [
       { name: 'email', label: 'Email', type: 'email' },
       { name: 'telephone', label: 'Telephone', type: 'tel', required: true },
       { name: 'serviceType', label: 'Service Type', type: 'select', options: serviceTypes, required: true },
-      { name: 'location', label: 'Location', type: 'select', options: locations },
+      { name: 'location', label: 'Location', type: 'text' },
       { name: 'source', label: 'Lead Source', type: 'select', options: leadSources },
       { name: 'budget', label: 'Budget', type: 'money' },
       { name: 'moveInDate', label: 'Move-in Date', type: 'date' },
@@ -143,7 +142,7 @@ export const modules: ModuleConfig[] = [
       { name: 'clientName', label: 'Client / Company', type: 'text', required: true },
       { name: 'email', label: 'Email', type: 'email' },
       { name: 'serviceType', label: 'Service Type', type: 'select', options: serviceTypes },
-      { name: 'location', label: 'Location', type: 'select', options: locations },
+      { name: 'location', label: 'Location', type: 'text' },
       { name: 'amount', label: 'Amount', type: 'money', required: true },
       { name: 'validUntil', label: 'Valid Until', type: 'date' },
       { name: 'description', label: 'Proposal Details', type: 'textarea', colSpan: 2 }
@@ -163,7 +162,7 @@ export const modules: ModuleConfig[] = [
       { name: 'clientName', label: 'Client Name', type: 'text', required: true },
       { name: 'telephone', label: 'Telephone', type: 'tel' },
       { name: 'serviceType', label: 'Service Type', type: 'select', options: serviceTypes },
-      { name: 'location', label: 'Location', type: 'select', options: locations },
+      { name: 'location', label: 'Location', type: 'text' },
       { name: 'viewingAt', label: 'Viewing Date/Time', type: 'datetime', required: true },
       { name: 'staffMember', label: 'Staff Member', type: 'text' },
       { name: 'notes', label: 'Notes', type: 'textarea', colSpan: 2 }
@@ -299,7 +298,7 @@ export const modules: ModuleConfig[] = [
     fields: [
       { name: 'serviceType', label: 'Service Type', type: 'select', options: serviceTypes, required: true },
       { name: 'unitName', label: 'Unit / Package Name', type: 'text', required: true },
-      { name: 'location', label: 'Address Location', type: 'select', options: locations, required: true },
+      { name: 'location', label: 'Address Location', type: 'text', required: true },
       { name: 'floor', label: 'Floor / Zone', type: 'text' },
       { name: 'capacity', label: 'Capacity', type: 'number' },
       { name: 'sizeSqFt', label: 'Size Sq Ft', type: 'number' },
@@ -323,7 +322,7 @@ export const modules: ModuleConfig[] = [
     fields: [
       { name: 'roomName', label: 'Room Name', type: 'text', required: true },
       { name: 'roomCode', label: 'Room Code', type: 'text' },
-      { name: 'location', label: 'Location', type: 'select', options: locations },
+      { name: 'location', label: 'Location', type: 'text' },
       { name: 'capacity', label: 'Maximum People', type: 'number', required: true },
       { name: 'hourlyRate', label: 'Hourly Rate', type: 'money', required: true },
       { name: 'amenities', label: 'Amenities', type: 'textarea', colSpan: 2 }
@@ -344,7 +343,7 @@ export const modules: ModuleConfig[] = [
       { name: 'telephone', label: 'Telephone', type: 'tel' },
       { name: 'email', label: 'Email', type: 'email' },
       { name: 'roomName', label: 'Room Name', type: 'text', required: true },
-      { name: 'location', label: 'Location', type: 'select', options: locations },
+      { name: 'location', label: 'Location', type: 'text' },
       { name: 'bookingDate', label: 'Booking Date', type: 'date', required: true },
       { name: 'startTime', label: 'Start Time', type: 'time', required: true },
       { name: 'endTime', label: 'End Time', type: 'time', required: true },
@@ -395,7 +394,7 @@ export const modules: ModuleConfig[] = [
       { name: 'telephone', label: 'Telephone', type: 'tel' },
       { name: 'tradeLicenseNumber', label: 'Trade Licence Number', type: 'text' },
       { name: 'serviceType', label: 'Service Type', type: 'select', options: serviceTypes },
-      { name: 'location', label: 'Location', type: 'select', options: locations },
+      { name: 'location', label: 'Location', type: 'text' },
       { name: 'notes', label: 'Notes', type: 'textarea', colSpan: 2 }
     ]
   },
@@ -413,7 +412,7 @@ export const modules: ModuleConfig[] = [
       { name: 'contractNumber', label: 'Contract Number', type: 'text', required: true },
       { name: 'clientName', label: 'Client / Company', type: 'text', required: true },
       { name: 'serviceType', label: 'Service Type', type: 'select', options: serviceTypes },
-      { name: 'location', label: 'Location', type: 'select', options: locations },
+      { name: 'location', label: 'Location', type: 'text' },
       { name: 'startDate', label: 'Start Date', type: 'date', required: true },
       { name: 'endDate', label: 'End Date', type: 'date', required: true },
       { name: 'renewalReminderAt', label: 'Renewal Reminder', type: 'date' },
