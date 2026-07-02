@@ -2,6 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
+import { Spinner } from '@/components/ui/Spinner';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -58,7 +59,9 @@ export default function LoginPage() {
               <input className="input" value={password} onChange={(e) => setPassword(e.target.value)} type="password" placeholder="Enter your password" required />
               <p className="mt-2 text-xs text-slate-500">Default after seed: admin@example.com / Admin123! — change this immediately.</p>
             </div>
-            <button disabled={loading} className="btn-primary w-full py-3">{loading ? 'Signing in...' : 'Sign in'}</button>
+            <button disabled={loading} className="btn-primary w-full py-3 flex items-center justify-center gap-2">
+              {loading ? <><Spinner size="sm" color="white" /><span>Signing in...</span></> : 'Sign in'}
+            </button>
           </form>
         </div>
       </div>

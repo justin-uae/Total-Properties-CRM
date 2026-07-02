@@ -2,6 +2,7 @@
 
 import { ModuleConfig, moduleMap } from '@/lib/modules';
 import { currency, fmtDate } from '@/lib/utils';
+import { Spinner } from '@/components/ui/Spinner';
 import { Download, Eye, Plus, RefreshCw, Trash2 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 
@@ -26,10 +27,39 @@ function valueFor(row: RecordRow, key: string) {
   return value || '—';
 }
 
+function TableSkeleton({ cols }: { cols: number }) {
+  return (
+    <>
+      {Array.from({ length: 6 }).map((_, i) => (
+        <tr key={i} className="border-b border-slate-100">
+          <td className="px-5 py-4">
+            <div className="space-y-2">
+              <div className="skeleton h-3.5 w-36" style={{ animationDelay: `${i * 80}ms` }} />
+              <div className="skeleton h-2.5 w-24" style={{ animationDelay: `${i * 80 + 40}ms` }} />
+            </div>
+          </td>
+          {Array.from({ length: cols }).map((_, j) => (
+            <td key={j} className="px-5 py-4">
+              <div className="skeleton h-3.5 w-20" style={{ animationDelay: `${i * 80 + j * 20}ms` }} />
+            </td>
+          ))}
+          <td className="px-5 py-4 text-right">
+            <div className="ml-auto flex justify-end gap-2">
+              <div className="skeleton h-8 w-8" style={{ animationDelay: `${i * 80}ms` }} />
+              <div className="skeleton h-8 w-8" style={{ animationDelay: `${i * 80 + 20}ms` }} />
+            </div>
+          </td>
+        </tr>
+      ))}
+    </>
+  );
+}
+
 export function ModulePage({ slug }: { slug: string }) {
   const module = moduleMap[slug]!;
   const [rows, setRows] = useState<RecordRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<RecordRow | null>(null);
   const [query, setQuery] = useState('');
@@ -61,6 +91,7 @@ export function ModulePage({ slug }: { slug: string }) {
 
   async function save(e: React.FormEvent) {
     e.preventDefault();
+    setSaving(true);
     const method = editing ? 'PUT' : 'POST';
     const url = editing ? `/api/records/${editing.id}` : '/api/records';
     const res = await fetch(url, {
@@ -68,6 +99,7 @@ export function ModulePage({ slug }: { slug: string }) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ module: module.slug, status: form.status, data: form })
     });
+    setSaving(false);
     if (!res.ok) {
       alert((await res.json()).message || 'Save failed');
       return;
@@ -106,7 +138,10 @@ export function ModulePage({ slug }: { slug: string }) {
         </div>
         <div className="flex flex-wrap gap-2">
           <input value={query} onChange={(e) => setQuery(e.target.value)} className="input w-64" placeholder="Search records..." />
-          <button onClick={load} className="btn-secondary"><RefreshCw className="mr-2 inline h-4 w-4" />Refresh</button>
+          <button onClick={load} disabled={loading} className="btn-secondary flex items-center gap-2">
+            <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+            Refresh
+          </button>
           <button onClick={exportCsv} className="btn-secondary"><Download className="mr-2 inline h-4 w-4" />Export</button>
           <button onClick={startCreate} className="btn-primary"><Plus className="mr-2 inline h-4 w-4" />Add {module.singular}</button>
         </div>
@@ -119,6 +154,7 @@ export function ModulePage({ slug }: { slug: string }) {
             <button onClick={() => setShowForm(false)} className="btn-secondary">Cancel</button>
           </div>
           <form onSubmit={save} className="grid gap-4 md:grid-cols-2">
+            <fieldset disabled={saving} className="contents">
             <div>
               <label className="label">Status</label>
               <select className="input" value={form.status || ''} onChange={(e) => setForm({ ...form, status: e.target.value })}>
@@ -146,8 +182,11 @@ export function ModulePage({ slug }: { slug: string }) {
             ))}
             <div className="md:col-span-2 flex justify-end gap-2">
               <button type="button" onClick={() => setShowForm(false)} className="btn-secondary">Cancel</button>
-              <button className="btn-primary">Save {module.singular}</button>
+              <button className="btn-primary flex items-center gap-2 min-w-[120px] justify-center" disabled={saving}>
+                {saving ? <><Spinner size="sm" color="white" /><span>Saving...</span></> : `Save ${module.singular}`}
+              </button>
             </div>
+            </fieldset>
           </form>
         </div>
       )}
@@ -167,7 +206,7 @@ export function ModulePage({ slug }: { slug: string }) {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {loading ? <tr><td className="px-5 py-8 text-slate-500" colSpan={module.tableFields.length + 2}>Loading...</td></tr> : filtered.map((row) => (
+              {loading ? <TableSkeleton cols={module.tableFields.length} /> : filtered.map((row) => (
                 <tr key={row.id} className="hover:bg-slate-50/70">
                   <td className="px-5 py-4 font-semibold">{row.title}<p className="text-xs font-normal text-slate-400">{new Date(row.createdAt).toLocaleString()}</p></td>
                   {module.tableFields.map((field) => (

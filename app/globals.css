@@ -32,3 +32,15 @@ body {
 .label { @apply mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500; }
 .status-pill { @apply inline-flex rounded-full px-2.5 py-1 text-xs font-semibold; }
 .sidebar-link { @apply flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium transition; }
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.skeleton {
+  @apply rounded-lg;
+  background: linear-gradient(90deg, #e2e8f0 25%, #f8fafc 50%, #e2e8f0 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s ease-in-out infinite;
+}
