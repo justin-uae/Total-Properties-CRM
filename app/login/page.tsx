@@ -28,7 +28,7 @@ export default function LoginPage() {
       return setError(json.message || 'Login failed');
     }
     setNavigating(true);
-    router.push('/dashboard');
+    router.push(json.role === 'TENANT' ? '/tenant-portal' : '/dashboard');
   }
 
   return (

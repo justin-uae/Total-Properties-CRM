@@ -3,7 +3,8 @@
 import { ModuleConfig, moduleMap } from '@/lib/modules';
 import { currency, fmtDate } from '@/lib/utils';
 import { Spinner } from '@/components/ui/Spinner';
-import { Download, Eye, FileText, Plus, RefreshCw, Send, Trash2, Upload } from 'lucide-react';
+import { Combobox } from '@/components/ui/Combobox';
+import { Download, Eye, EyeOff, FileText, Plus, RefreshCw, Send, Trash2, Upload } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 
 type RecordRow = {
@@ -75,6 +76,8 @@ export function ModulePage({ slug }: { slug: string }) {
   const [editing, setEditing] = useState<RecordRow | null>(null);
   const [query, setQuery] = useState('');
   const [form, setForm] = useState<Record<string, any>>({ status: module.defaultStatus || module.statuses[0] || 'New' });
+  const [dynamicRecords, setDynamicRecords] = useState<Record<string, RecordRow[]>>({});
+  const [showPassword, setShowPassword] = useState<Record<string, boolean>>({});
 
   async function load() {
     setLoading(true);
@@ -86,6 +89,45 @@ export function ModulePage({ slug }: { slug: string }) {
 
   useEffect(() => { load(); }, [module.slug]);
 
+  useEffect(() => {
+    const sourced = module.fields.filter((f) => f.optionsSource);
+    sourced.forEach(async (field) => {
+      const res = await fetch(`/api/records?module=${field.optionsSource}`);
+      const json = await res.json();
+      setDynamicRecords((d) => ({ ...d, [field.name]: json.records || [] }));
+    });
+  }, [module.slug]);
+
+  function optionsFor(field: NonNullable<typeof module.fields>[number]) {
+    const records = dynamicRecords[field.name] || [];
+    if (!field.optionsSource) return field.options?.map((o) => ({ value: o, label: o })) || [];
+    if (field.optionsValueField) {
+      const seen = new Set<string>();
+      const out: { value: string; label: string; detail?: string }[] = [];
+      for (const r of records) {
+        const v = String(r.data?.[field.optionsValueField] || '');
+        if (!v || seen.has(v)) continue;
+        seen.add(v);
+        const detail = [r.data?.contactName, r.data?.email || r.data?.telephone].filter(Boolean).join(' • ');
+        out.push({ value: v, label: v, detail: detail || undefined });
+      }
+      return out;
+    }
+    return records.map((r) => ({ value: r.id, label: r.title }));
+  }
+
+  function handleSelectChange(field: NonNullable<typeof module.fields>[number], value: string) {
+    const next = { ...form, [field.name]: value };
+    if (field.autofill) {
+      const records = dynamicRecords[field.name] || [];
+      const match = field.optionsValueField
+        ? records.find((r) => String(r.data?.[field.optionsValueField!] || '') === value)
+        : records.find((r) => r.id === value);
+      if (match) next[field.autofill.targetField] = match.data?.[field.autofill.sourceDataField] || '';
+    }
+    setForm(next);
+  }
+
   const filtered = useMemo(() => rows.filter((row) => JSON.stringify(row).toLowerCase().includes(query.toLowerCase())), [rows, query]);
 
   function startCreate() {
@@ -96,7 +138,13 @@ export function ModulePage({ slug }: { slug: string }) {
 
   function startEdit(row: RecordRow) {
     setEditing(row);
-    setForm({ ...row.data, status: row.status });
+    const data = { ...row.data };
+    for (const field of module.fields) {
+      if (field.type === 'file-multi' && data[field.name] && !Array.isArray(data[field.name])) {
+        data[field.name] = isFileRef(data[field.name]) ? [data[field.name]] : [];
+      }
+    }
+    setForm({ ...data, status: row.status });
     setShowForm(true);
   }
 
@@ -117,7 +165,7 @@ export function ModulePage({ slug }: { slug: string }) {
     }
     if (!editing) {
       const { record } = await res.json();
-      const fileRefs = Object.values(form).filter(isFileRef);
+      const fileRefs = Object.values(form).flatMap((v) => (Array.isArray(v) ? v.filter(isFileRef) : isFileRef(v) ? [v] : []));
       await Promise.allSettled(
         fileRefs.map((ref) =>
           fetch(`/api/files/${ref.id}`, {
@@ -149,6 +197,33 @@ export function ModulePage({ slug }: { slug: string }) {
       try { json = await res.json(); } catch { /* non-JSON body */ }
       if (!res.ok) { alert(json.message || `Upload failed (${res.status})`); return; }
       setForm((f) => ({ ...f, [fieldName]: { id: json.file.id, name: json.file.originalName, mimeType: json.file.mimeType } }));
+    } catch (err: any) {
+      alert(err?.message || 'Upload failed');
+    } finally {
+      setUploading((u) => ({ ...u, [fieldName]: false }));
+    }
+  }
+
+  async function handleMultiFileRemove(fieldName: string, fileId: string) {
+    await fetch(`/api/files/${fileId}`, { method: 'DELETE' });
+    setForm((f) => ({ ...f, [fieldName]: (f[fieldName] || []).filter((ref: FileRef) => ref.id !== fileId) }));
+  }
+
+  async function handleMultiFileUpload(fieldName: string, files: FileList) {
+    setUploading((u) => ({ ...u, [fieldName]: true }));
+    try {
+      for (const file of Array.from(files)) {
+        const fd = new FormData();
+        fd.append('file', file);
+        fd.append('module', module.slug);
+        if (editing) fd.append('recordId', editing.id);
+        const res = await fetch('/api/files/upload', { method: 'POST', body: fd });
+        let json: any = {};
+        try { json = await res.json(); } catch { /* non-JSON body */ }
+        if (!res.ok) { alert(json.message || `Upload failed (${res.status})`); continue; }
+        const ref = { id: json.file.id, name: json.file.originalName, mimeType: json.file.mimeType };
+        setForm((f) => ({ ...f, [fieldName]: [...(f[fieldName] || []), ref] }));
+      }
     } catch (err: any) {
       alert(err?.message || 'Upload failed');
     } finally {
@@ -233,18 +308,36 @@ export function ModulePage({ slug }: { slug: string }) {
                 {module.statuses.map((s) => <option key={s} value={s}>{s}</option>)}
               </select>
             </div>
-            {module.fields.map((field) => (
+            {module.fields.filter((field) => !(field.hideWhen && Boolean(form[field.hideWhen.field]) === Boolean(field.hideWhen.notEmpty))).map((field) => (
               <div key={field.name} className={`min-w-0${field.colSpan === 2 ? ' md:col-span-2' : ''}`}>
                 <label className="label">{field.label}{field.required ? ' *' : ''}</label>
                 {field.type === 'textarea' ? (
                   <textarea className="input min-h-28" disabled={saving} value={form[field.name] || ''} onChange={(e) => setForm({ ...form, [field.name]: e.target.value })} required={field.required} placeholder={field.placeholder} />
+                ) : field.type === 'select' && field.optionsSource && field.optionsValueField ? (
+                  <Combobox
+                    value={form[field.name] || ''}
+                    onChange={(v) => handleSelectChange(field, v)}
+                    options={optionsFor(field)}
+                    disabled={saving}
+                    required={field.required}
+                    placeholder={field.placeholder}
+                  />
                 ) : field.type === 'select' ? (
-                  <select className="input" disabled={saving} value={form[field.name] || ''} onChange={(e) => setForm({ ...form, [field.name]: e.target.value })} required={field.required}>
+                  <select className="input" disabled={saving} value={form[field.name] || ''} onChange={(e) => handleSelectChange(field, e.target.value)} required={field.required}>
                     <option value="">Select...</option>
-                    {field.options?.map((option) => <option key={option} value={option}>{option}</option>)}
+                    {optionsFor(field).map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
                   </select>
                 ) : field.type === 'checkbox' ? (
                   <label className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white p-3 text-sm"><input type="checkbox" disabled={saving} checked={Boolean(form[field.name])} onChange={(e) => setForm({ ...form, [field.name]: e.target.checked })} /> Yes</label>
+                ) : field.type === 'checkbox-group' ? (
+                  <div className="flex flex-wrap gap-3">
+                    {field.groupFields?.map((gf) => (
+                      <label key={gf.name} className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm">
+                        <input type="checkbox" disabled={saving} checked={Boolean(form[gf.name])} onChange={(e) => setForm({ ...form, [gf.name]: e.target.checked })} />
+                        {gf.label}
+                      </label>
+                    ))}
+                  </div>
                 ) : field.type === 'file' ? (
                   (() => {
                     const val = form[field.name];
@@ -281,6 +374,56 @@ export function ModulePage({ slug }: { slug: string }) {
                       </label>
                     );
                   })()
+                ) : field.type === 'file-multi' ? (
+                  (() => {
+                    const raw = form[field.name];
+                    const refs: FileRef[] = Array.isArray(raw) ? raw : isFileRef(raw) ? [raw] : [];
+                    return (
+                      <div className="space-y-3">
+                        {refs.length > 0 && (
+                          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                            {refs.map((ref) => {
+                              const isImg = ref.mimeType?.startsWith('image/');
+                              return (
+                                <div key={ref.id} className="overflow-hidden rounded-xl border border-slate-200 bg-slate-50">
+                                  {isImg ? <img src={`/api/files/${ref.id}`} alt={ref.name} className="h-24 w-full object-cover" /> : (
+                                    <a href={`/api/files/${ref.id}?download=true`} className="flex h-24 items-center justify-center"><FileText className="h-8 w-8 text-slate-400" /></a>
+                                  )}
+                                  <div className="flex items-center gap-1 border-t border-slate-200 bg-white px-2 py-1.5">
+                                    <a href={`/api/files/${ref.id}?download=true`} className="min-w-0 flex-1 truncate text-xs font-medium text-slate-700 hover:underline">{ref.name}</a>
+                                    <button type="button" disabled={saving} onClick={() => handleMultiFileRemove(field.name, ref.id)} className="text-xs font-medium text-red-500 hover:text-red-700">Remove</button>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+                        {uploading[field.name] ? (
+                          <div className="flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 p-4">
+                            <Spinner size="sm" color="muted" />
+                            <span className="text-sm text-slate-500">Uploading…</span>
+                          </div>
+                        ) : (
+                          <label className="flex cursor-pointer flex-col items-center gap-3 rounded-xl border-2 border-dashed border-slate-200 bg-slate-50 p-6 text-center transition hover:border-[rgb(var(--accent))]">
+                            <Upload className="h-7 w-7 text-slate-400" />
+                            <div>
+                              <p className="text-sm font-medium text-slate-600">Click to add files</p>
+                              <p className="mt-0.5 text-xs text-slate-400">PDF, JPG, PNG, WebP, GIF — max 10 MB each</p>
+                            </div>
+                            <input type="file" multiple className="sr-only" accept=".pdf,.jpg,.jpeg,.png,.webp,.gif" disabled={saving}
+                              onChange={(e) => { const f = e.target.files; if (f && f.length) handleMultiFileUpload(field.name, f); }} />
+                          </label>
+                        )}
+                      </div>
+                    );
+                  })()
+                ) : field.type === 'password' ? (
+                  <div className="relative">
+                    <input className="input pr-10" disabled={saving} type={showPassword[field.name] ? 'text' : 'password'} value={form[field.name] || ''} onChange={(e) => setForm({ ...form, [field.name]: e.target.value })} required={field.required} placeholder={field.placeholder} />
+                    <button type="button" tabIndex={-1} onClick={() => setShowPassword((s) => ({ ...s, [field.name]: !s[field.name] }))} className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
+                      {showPassword[field.name] ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
                 ) : (
                   <input className="input" disabled={saving} type={field.type === 'money' ? 'number' : field.type} step={field.type === 'money' ? '0.01' : undefined} value={form[field.name] || ''} onChange={(e) => setForm({ ...form, [field.name]: e.target.value })} required={field.required} placeholder={field.placeholder} />
                 )}

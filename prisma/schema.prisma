@@ -47,12 +47,14 @@ model User {
   lastLoginAt         DateTime?
   failedLoginCount    Int          @default(0)
   lockedUntil         DateTime?
+  clientRecordId      String?
   createdAt           DateTime     @default(now())
   updatedAt           DateTime     @updatedAt
   permissions         Permission[]
   createdRecords      Record[]     @relation("CreatedBy")
   assignedRecords     Record[]     @relation("AssignedTo")
   auditLogs           AuditLog[]
+  clientRecord        Record?      @relation("TenantClient", fields: [clientRecordId], references: [id])
 }
 
 model Permission {
@@ -86,6 +88,7 @@ model Record {
   assignedTo   User?      @relation("AssignedTo", fields: [assignedToId], references: [id])
   createdBy    User?      @relation("CreatedBy", fields: [createdById], references: [id])
   files        FileObject[]
+  tenantUsers  User[]     @relation("TenantClient")
 
   @@index([module, status])
   @@index([module, createdAt])

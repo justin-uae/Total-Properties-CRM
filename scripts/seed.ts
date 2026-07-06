@@ -76,7 +76,7 @@ async function main() {
         },
         {
           module: 'visitors', title: 'David Smith', status: 'Checked In', createdById: admin.id,
-          data: { visitorName: 'David Smith', company: 'DS Trading', hostName: 'Bright Future LLC', purpose: 'Client meeting', badgeNumber: 'V-102', checkInAt: new Date().toISOString() } as any
+          data: { visitorName: 'David Smith', company: 'DS Trading', hostName: 'Bright Future LLC', purpose: 'Client meeting', officeNumber: 'V-102', visitDate: new Date().toISOString().slice(0,10), checkInAt: new Date().toTimeString().slice(0,5) } as any
         },
         {
           module: 'mail-parcels', title: 'Parcel for Bright Future LLC', status: 'Received', createdById: admin.id,

@@ -6,21 +6,11 @@ import { auditLog } from '@/lib/audit';
 import { moduleMap } from '@/lib/modules';
 import { ipFromHeaders } from '@/lib/utils';
 import { deleteFile } from '@/lib/storage';
+import { meetingRoomClash } from '@/lib/meeting-rooms';
+import { applyRolePermissions } from '@/lib/permissions';
 
 function titleFor(module: string, data: any) {
   return data.fullName || data.companyName || data.clientName || data.visitorName || data.roomName || data.unitName || data.invoiceNumber || data.quoteNumber || data.contractNumber || data.ruleName || data.serviceName || `${module} record`;
-}
-
-async function meetingRoomClash(data: any, exceptId?: string) {
-  if (!data.roomName || !data.bookingDate || !data.startTime || !data.endTime) return null;
-  const where: any = { module: 'meeting-room-bookings' };
-  if (exceptId) where.NOT = { id: exceptId };
-  const existing = await prisma.record.findMany({ where });
-  return existing.find((row) => {
-    const d = row.data as any;
-    if (d.roomName !== data.roomName || d.bookingDate !== data.bookingDate) return false;
-    return data.startTime < d.endTime && data.endTime > d.startTime && !['Cancelled'].includes(row.status);
-  });
 }
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -38,15 +28,26 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
   if (body.module === 'staff-users') {
     await assertCan('staff-users', PermissionAction.EDIT);
     const data = body.data || {};
+    if (data.role === 'TENANT' && !data.clientRecordId) {
+      return NextResponse.json({ message: 'Linked Company is required for the Tenant role' }, { status: 400 });
+    }
+    let name = String(data.name || '').trim();
+    if (!name && data.clientRecordId) {
+      const client = await prisma.record.findUnique({ where: { id: data.clientRecordId } });
+      name = (client?.data as any)?.companyName || client?.title || '';
+    }
+    if (!name) return NextResponse.json({ message: 'Name is required' }, { status: 400 });
     const updated = await prisma.user.update({
       where: { id },
       data: {
-        name: data.name,
+        name,
         email: String(data.email || '').toLowerCase(),
         role: data.role,
+        clientRecordId: data.clientRecordId || null,
         status: data.status === 'Suspended' ? 'SUSPENDED' : 'ACTIVE'
       }
     });
+    await applyRolePermissions(id, data.role);
     await auditLog({ userId: user.id, action: 'UPDATE_USER', module: 'staff-users', recordId: id, ipAddress: ipFromHeaders(req.headers), after: data });
     return NextResponse.json({ user: updated });
   }

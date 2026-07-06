@@ -6,55 +6,12 @@ import { prisma } from '@/lib/db';
 import { auditLog } from '@/lib/audit';
 import { moduleMap } from '@/lib/modules';
 import { ipFromHeaders, publicToken } from '@/lib/utils';
-
-const ALL: PermissionAction[] = ['VIEW', 'CREATE', 'EDIT', 'DELETE', 'EXPORT', 'APPROVE', 'EMAIL', 'FINANCE', 'SETTINGS'];
-const STANDARD: PermissionAction[] = ['VIEW', 'CREATE', 'EDIT', 'DELETE', 'EXPORT', 'EMAIL'];
-const VIEW_ONLY: PermissionAction[] = ['VIEW'];
-
-const rolePermissions: Record<string, { modules: string[]; actions: PermissionAction[] }[]> = {
-  MANAGER: [{ modules: ['web-form-leads','leads','quotations','viewings','visitors','mail-parcels','access-cards-keys','maintenance','services-offices','meeting-rooms','meeting-room-bookings','clients','contracts','documents','deposits','move-outs','invoices','payments','recurring-billing','add-on-services','staff-users','automation-rules','settings'], actions: ALL }],
-  SALES: [
-    { modules: ['web-form-leads','leads','quotations','viewings'], actions: STANDARD },
-    { modules: ['clients','services-offices','meeting-rooms','meeting-room-bookings'], actions: VIEW_ONLY }
-  ],
-  RECEPTION: [
-    { modules: ['visitors','mail-parcels','access-cards-keys','maintenance','meeting-room-bookings'], actions: ['VIEW','CREATE','EDIT'] },
-    { modules: ['leads','clients','services-offices','meeting-rooms'], actions: VIEW_ONLY }
-  ],
-  FINANCE: [
-    { modules: ['invoices','payments','recurring-billing','add-on-services','deposits'], actions: ['VIEW','CREATE','EDIT','DELETE','EXPORT','EMAIL','FINANCE'] },
-    { modules: ['clients','contracts','move-outs'], actions: ['VIEW','EXPORT'] }
-  ],
-  OPERATIONS: [
-    { modules: ['visitors','mail-parcels','access-cards-keys','maintenance','services-offices','meeting-rooms','meeting-room-bookings'], actions: ['VIEW','CREATE','EDIT','DELETE','EXPORT'] },
-    { modules: ['clients','contracts'], actions: VIEW_ONLY }
-  ],
-  TENANT: []
-};
-
-async function applyRolePermissions(userId: string, role: string) {
-  await prisma.permission.deleteMany({ where: { userId } });
-  const groups = rolePermissions[role] || [];
-  const rows = groups.flatMap(({ modules, actions }) =>
-    modules.flatMap((module) => actions.map((action) => ({ userId, module, action })))
-  );
-  if (rows.length) await prisma.permission.createMany({ data: rows });
-}
+import { meetingRoomClash } from '@/lib/meeting-rooms';
+import { generateTicketNumber } from '@/lib/tickets';
+import { applyRolePermissions } from '@/lib/permissions';
 
 function titleFor(module: string, data: any) {
   return data.fullName || data.companyName || data.clientName || data.visitorName || data.roomName || data.unitName || data.invoiceNumber || data.quoteNumber || data.contractNumber || data.ruleName || data.serviceName || `${module} record`;
-}
-
-async function meetingRoomClash(data: any, exceptId?: string) {
-  if (!data.roomName || !data.bookingDate || !data.startTime || !data.endTime) return null;
-  const where: any = { module: 'meeting-room-bookings' };
-  if (exceptId) where.NOT = { id: exceptId };
-  const existing = await prisma.record.findMany({ where });
-  return existing.find((row) => {
-    const d = row.data as any;
-    if (d.roomName !== data.roomName || d.bookingDate !== data.bookingDate) return false;
-    return data.startTime < d.endTime && data.endTime > d.startTime && !['Cancelled'].includes(row.status);
-  });
 }
 
 export async function GET(req: NextRequest) {
@@ -70,7 +27,7 @@ export async function GET(req: NextRequest) {
         module: 'staff-users',
         title: u.name,
         status: u.status === 'ACTIVE' ? 'Active' : 'Suspended',
-        data: { name: u.name, email: u.email, role: u.role, status: u.status === 'ACTIVE' ? 'Active' : 'Suspended' },
+        data: { name: u.name, email: u.email, role: u.role, clientRecordId: u.clientRecordId, status: u.status === 'ACTIVE' ? 'Active' : 'Suspended' },
         createdAt: u.createdAt,
         updatedAt: u.updatedAt
       }))
@@ -98,11 +55,21 @@ export async function POST(req: NextRequest) {
     const password = String(data.password || '');
     if (!password) return NextResponse.json({ message: 'Password is required for new staff users' }, { status: 400 });
     const role = data.role || 'SALES';
+    if (role === 'TENANT' && !data.clientRecordId) {
+      return NextResponse.json({ message: 'Linked Company is required for the Tenant role' }, { status: 400 });
+    }
+    let name = String(data.name || '').trim();
+    if (!name && data.clientRecordId) {
+      const client = await prisma.record.findUnique({ where: { id: data.clientRecordId } });
+      name = (client?.data as any)?.companyName || client?.title || '';
+    }
+    if (!name) return NextResponse.json({ message: 'Name is required' }, { status: 400 });
     const created = await prisma.user.create({
       data: {
-        name: String(data.name),
+        name,
         email: String(data.email).toLowerCase(),
         role,
+        clientRecordId: data.clientRecordId || null,
         passwordHash: await bcrypt.hash(password, 12),
         mustChangePassword: true
       }
@@ -110,6 +77,11 @@ export async function POST(req: NextRequest) {
     await applyRolePermissions(created.id, role);
     await auditLog({ userId: user.id, action: 'CREATE_USER', module, recordId: created.id, ipAddress: ipFromHeaders(req.headers), after: data });
     return NextResponse.json({ user: created });
+  }
+
+  if (module === 'maintenance') {
+    data.ticketNumber = await generateTicketNumber();
+    data.reportedAt = new Date().toISOString();
   }
 
   const record = await prisma.record.create({

@@ -29,7 +29,7 @@ import {
   DatabaseBackup
 } from 'lucide-react';
 
-export type FieldType = 'text' | 'email' | 'tel' | 'number' | 'money' | 'textarea' | 'select' | 'date' | 'time' | 'datetime' | 'checkbox' | 'file' | 'password';
+export type FieldType = 'text' | 'email' | 'tel' | 'number' | 'money' | 'textarea' | 'select' | 'date' | 'time' | 'datetime' | 'checkbox' | 'checkbox-group' | 'file' | 'file-multi' | 'password';
 
 export type ModuleField = {
   name: string;
@@ -37,6 +37,16 @@ export type ModuleField = {
   type: FieldType;
   required?: boolean;
   options?: string[];
+  /** Module slug to pull live options from, instead of a static options array. */
+  optionsSource?: string;
+  /** If set, options use record.data[optionsValueField] as both value and label (a string, e.g. company name) instead of record.id/record.title. */
+  optionsValueField?: string;
+  /** When this field's value changes, copy the matching record's data[sourceDataField] into form[targetField] (e.g. auto-fill email from the selected company). */
+  autofill?: { targetField: string; sourceDataField: string };
+  /** Hide this field while the named field has (or lacks) a value. */
+  hideWhen?: { field: string; notEmpty?: boolean };
+  /** For type 'checkbox-group': several independent checkboxes rendered inline on one row, each storing its own boolean under form[name]. */
+  groupFields?: { name: string; label: string }[];
   placeholder?: string;
   colSpan?: 1 | 2;
 };
@@ -137,7 +147,7 @@ export const modules: ModuleConfig[] = [
     tableFields: ['quoteNumber', 'clientName', 'serviceType', 'amount', 'validUntil', 'status'],
     fields: [
       { name: 'quoteNumber', label: 'Quote Number', type: 'text', required: true },
-      { name: 'clientName', label: 'Client / Company', type: 'text', required: true },
+      { name: 'clientName', label: 'Client / Company', type: 'select', optionsSource: 'clients', optionsValueField: 'companyName', required: true },
       { name: 'email', label: 'Email', type: 'email' },
       { name: 'serviceType', label: 'Service Type', type: 'select', options: serviceTypes },
       { name: 'location', label: 'Location', type: 'text' },
@@ -196,9 +206,10 @@ export const modules: ModuleConfig[] = [
       { name: 'hostName', label: 'Host / Tenant', type: 'text', required: true },
       { name: 'purpose', label: 'Purpose', type: 'text' },
       { name: 'idReference', label: 'ID / Passport Reference', type: 'text' },
-      { name: 'badgeNumber', label: 'Badge Number', type: 'text' },
-      { name: 'checkInAt', label: 'Check-in Time', type: 'datetime' },
-      { name: 'checkOutAt', label: 'Check-out Time', type: 'datetime' },
+      { name: 'officeNumber', label: 'Office Number', type: 'text' },
+      { name: 'visitDate', label: 'Date', type: 'date' },
+      { name: 'checkInAt', label: 'Check-in Time', type: 'time' },
+      { name: 'checkOutAt', label: 'Check-out Time', type: 'time' },
       { name: 'notes', label: 'Notes', type: 'textarea', colSpan: 2 }
     ]
   },
@@ -213,13 +224,11 @@ export const modules: ModuleConfig[] = [
     statuses: ['Received', 'Client Notified', 'Collected', 'Forwarded', 'Returned', 'Archived'],
     tableFields: ['clientName', 'itemType', 'sender', 'trackingNumber', 'receivedAt', 'status'],
     fields: [
-      { name: 'clientName', label: 'Client / Company', type: 'text', required: true },
+      { name: 'clientName', label: 'Tenant / Company', type: 'select', optionsSource: 'clients', optionsValueField: 'companyName', required: true },
       { name: 'itemType', label: 'Item Type', type: 'select', options: ['Letter', 'Parcel', 'Courier', 'Document', 'Cheque'] },
       { name: 'sender', label: 'Sender', type: 'text' },
       { name: 'trackingNumber', label: 'Tracking Number', type: 'text' },
       { name: 'receivedAt', label: 'Received At', type: 'datetime' },
-      { name: 'forwardingAddress', label: 'Forwarding Address', type: 'textarea', colSpan: 2 },
-      { name: 'handlingCharge', label: 'Handling / Storage Charge', type: 'money' },
       { name: 'notes', label: 'Notes', type: 'textarea', colSpan: 2 }
     ]
   },
@@ -232,15 +241,13 @@ export const modules: ModuleConfig[] = [
     icon: KeyRound,
     defaultStatus: 'Issued',
     statuses: ['Issued', 'Due Return', 'Returned', 'Lost', 'Charged'],
-    tableFields: ['clientName', 'itemType', 'identifier', 'issuedAt', 'returnDueAt', 'status'],
+    tableFields: ['clientName', 'itemType', 'identifier', 'issuedAt', 'numberOfItems', 'status'],
     fields: [
-      { name: 'clientName', label: 'Client / Company', type: 'text', required: true },
+      { name: 'clientName', label: 'Tenant / Company', type: 'select', optionsSource: 'clients', optionsValueField: 'companyName', required: true },
       { name: 'itemType', label: 'Item Type', type: 'select', options: ['Access Card', 'Office Key', 'Parking Card', 'Building Pass'] },
       { name: 'identifier', label: 'Card / Key Number', type: 'text', required: true },
-      { name: 'depositAmount', label: 'Deposit Amount', type: 'money' },
-      { name: 'lostCharge', label: 'Lost Charge', type: 'money' },
+      { name: 'numberOfItems', label: 'Number of Items', type: 'number' },
       { name: 'issuedAt', label: 'Issued At', type: 'date' },
-      { name: 'returnDueAt', label: 'Return Due At', type: 'date' },
       { name: 'returnedAt', label: 'Returned At', type: 'date' },
       { name: 'notes', label: 'Notes', type: 'textarea', colSpan: 2 }
     ]
@@ -254,16 +261,12 @@ export const modules: ModuleConfig[] = [
     icon: Wrench,
     defaultStatus: 'Open',
     statuses: ['Open', 'In Progress', 'Waiting Tenant', 'Completed', 'Closed'],
-    tableFields: ['ticketNumber', 'clientName', 'category', 'priority', 'reportedAt', 'status'],
+    tableFields: ['ticketNumber', 'clientName', 'category', 'reportedAt', 'status'],
     fields: [
-      { name: 'ticketNumber', label: 'Ticket Number', type: 'text', required: true },
-      { name: 'clientName', label: 'Client / Company', type: 'text' },
-      { name: 'category', label: 'Category', type: 'select', options: ['AC', 'Internet', 'Cleaning', 'Furniture', 'Electrical', 'Plumbing', 'Security', 'Other'] },
-      { name: 'priority', label: 'Priority', type: 'select', options: ['Low', 'Medium', 'High', 'Urgent'] },
-      { name: 'reportedAt', label: 'Reported At', type: 'datetime' },
-      { name: 'completedAt', label: 'Completed At', type: 'datetime' },
-      { name: 'issue', label: 'Issue', type: 'textarea', colSpan: 2 },
-      { name: 'resolution', label: 'Resolution Notes', type: 'textarea', colSpan: 2 }
+      { name: 'clientName', label: 'Tenant / Company', type: 'select', optionsSource: 'clients', optionsValueField: 'companyName' },
+      { name: 'category', label: 'Category', type: 'select', options: ['AC', 'Maintenance', 'Electricity', 'Other'] },
+      { name: 'issue', label: 'Details', type: 'textarea', colSpan: 2 },
+      { name: 'resolution', label: 'Attach Photos', type: 'file-multi', colSpan: 2 }
     ]
   },
   {
@@ -391,7 +394,7 @@ export const modules: ModuleConfig[] = [
     tableFields: ['contractNumber', 'clientName', 'serviceType', 'startDate', 'endDate', 'status'],
     fields: [
       { name: 'contractNumber', label: 'Contract Number', type: 'text', required: true },
-      { name: 'clientName', label: 'Client / Company', type: 'text', required: true },
+      { name: 'clientName', label: 'Client / Company', type: 'select', optionsSource: 'clients', optionsValueField: 'companyName', required: true },
       { name: 'serviceType', label: 'Service Type', type: 'select', options: serviceTypes },
       { name: 'location', label: 'Location', type: 'text' },
       { name: 'startDate', label: 'Start Date', type: 'date', required: true },
@@ -415,11 +418,11 @@ export const modules: ModuleConfig[] = [
     statuses: ['Valid', 'Expiring Soon', 'Expired', 'Missing', 'Archived'],
     tableFields: ['clientName', 'documentType', 'expiryDate', 'status'],
     fields: [
-      { name: 'clientName', label: 'Client / Company', type: 'text', required: true },
+      { name: 'clientName', label: 'Client / Company', type: 'select', optionsSource: 'clients', optionsValueField: 'companyName', required: true },
       { name: 'documentType', label: 'Document Type', type: 'select', options: ['Trade Licence', 'Passport', 'Emirates ID', 'Contract', 'Tenancy Agreement', 'Payment Receipt', 'Other'] },
       { name: 'documentNumber', label: 'Document Number', type: 'text' },
       { name: 'expiryDate', label: 'Expiry Date', type: 'date' },
-      { name: 'file', label: 'Upload Document', type: 'file' },
+      { name: 'file', label: 'Upload Documents', type: 'file-multi' },
       { name: 'notes', label: 'Notes', type: 'textarea', colSpan: 2 }
     ]
   },
@@ -434,7 +437,7 @@ export const modules: ModuleConfig[] = [
     statuses: ['Requested', 'Paid', 'Held', 'Partially Refunded', 'Refunded', 'Deducted'],
     tableFields: ['clientName', 'amount', 'paidDate', 'refundDueDate', 'status'],
     fields: [
-      { name: 'clientName', label: 'Client / Company', type: 'text', required: true },
+      { name: 'clientName', label: 'Client / Company', type: 'select', optionsSource: 'clients', optionsValueField: 'companyName', required: true },
       { name: 'amount', label: 'Deposit Amount', type: 'money', required: true },
       { name: 'paidDate', label: 'Paid Date', type: 'date' },
       { name: 'deductionAmount', label: 'Deduction Amount', type: 'money' },
@@ -454,11 +457,22 @@ export const modules: ModuleConfig[] = [
     statuses: ['Notice Received', 'Inspection Due', 'Final Invoice Due', 'Keys Due', 'Deposit Review', 'Completed', 'Cancelled'],
     tableFields: ['clientName', 'officeUnit', 'moveOutDate', 'finalInvoiceStatus', 'status'],
     fields: [
-      { name: 'clientName', label: 'Client / Company', type: 'text', required: true },
+      { name: 'clientName', label: 'Client / Company', type: 'select', optionsSource: 'clients', optionsValueField: 'companyName', required: true },
       { name: 'officeUnit', label: 'Office Unit', type: 'text' },
       { name: 'moveOutDate', label: 'Move-Out Date', type: 'date' },
       { name: 'inspectionDate', label: 'Inspection Date', type: 'date' },
-      { name: 'keysReturned', label: 'Keys Returned', type: 'checkbox' },
+      { name: 'numberOfKeysReturned', label: 'Number of Keys Returned', type: 'select', options: ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10'] },
+      {
+        name: 'moveOutChecklist',
+        label: 'Checklist',
+        type: 'checkbox-group',
+        colSpan: 2,
+        groupFields: [
+          { name: 'keysReturned', label: 'Keys Returned' },
+          { name: 'tawtheeqClosed', label: 'Tawtheeq Closed' },
+          { name: 'goodConditionOffice', label: 'Good Conditioned Office' }
+        ]
+      },
       { name: 'finalInvoiceStatus', label: 'Final Invoice Status', type: 'select', options: ['Not Created', 'Created', 'Paid', 'Disputed'] },
       { name: 'depositRefundStatus', label: 'Deposit Refund Status', type: 'select', options: ['Pending', 'Approved', 'Paid', 'Deducted'] },
       { name: 'notes', label: 'Notes', type: 'textarea', colSpan: 2 }
@@ -590,9 +604,10 @@ export const modules: ModuleConfig[] = [
     statuses: ['Active', 'Suspended'],
     tableFields: ['name', 'email', 'role', 'status'],
     fields: [
-      { name: 'name', label: 'Name', type: 'text', required: true },
+      { name: 'clientRecordId', label: 'Linked Company (Tenant accounts only)', type: 'select', optionsSource: 'clients', autofill: { targetField: 'email', sourceDataField: 'email' } },
+      { name: 'name', label: 'Name', type: 'text', required: true, hideWhen: { field: 'clientRecordId', notEmpty: true } },
       { name: 'email', label: 'Email', type: 'email', required: true },
-      { name: 'role', label: 'Role', type: 'select', options: ['MASTER_ADMIN', 'MANAGER', 'SALES', 'RECEPTION', 'FINANCE', 'OPERATIONS'] },
+      { name: 'role', label: 'Role', type: 'select', options: ['MASTER_ADMIN', 'MANAGER', 'SALES', 'RECEPTION', 'FINANCE', 'OPERATIONS', 'TENANT'] },
       { name: 'password', label: 'Temporary Password', type: 'password' }
     ]
   },

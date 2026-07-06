@@ -12,16 +12,14 @@ async function sumInvoices() {
 }
 
 export default async function DashboardPage() {
-  const [newLeads, activeClients, openTickets, bookings, invoices, revenue, occupied, services] = await Promise.all([
-    count('leads', 'New'),
-    count('clients', 'Active'),
-    count('maintenance', 'Open'),
-    count('meeting-room-bookings'),
-    count('invoices'),
-    sumInvoices(),
-    prisma.record.count({ where: { module: 'services-offices', status: 'Occupied' } }),
-    count('services-offices')
-  ]);
+  const newLeads = await count('leads', 'New');
+  const activeClients = await count('clients', 'Active');
+  const openTickets = await count('maintenance', 'Open');
+  const bookings = await count('meeting-room-bookings');
+  const invoices = await count('invoices');
+  const revenue = await sumInvoices();
+  const occupied = await prisma.record.count({ where: { module: 'services-offices', status: 'Occupied' } });
+  const services = await count('services-offices');
   const occupancy = services ? Math.round((occupied / services) * 100) : 0;
   const recent = await prisma.record.findMany({ orderBy: { createdAt: 'desc' }, take: 8 });
   const due = await prisma.record.findMany({ where: { OR: [{ module: 'invoices' }, { module: 'contracts' }, { module: 'maintenance' }] }, orderBy: { updatedAt: 'desc' }, take: 6 });

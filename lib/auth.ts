@@ -85,6 +85,19 @@ export async function assertCan(module: string, action: PermissionAction | keyof
   return user;
 }
 
+export async function requireTenantApi() {
+  const user = await requireUser();
+  if (user.role !== 'TENANT') throw new Response('Forbidden', { status: 403 });
+  if (!user.clientRecordId) throw new Response('No company linked to this account', { status: 403 });
+  return user;
+}
+
+export async function tenantCompanyName(user: { clientRecordId: string | null }) {
+  if (!user.clientRecordId) return null;
+  const client = await prisma.record.findUnique({ where: { id: user.clientRecordId } });
+  return (client?.data as any)?.companyName || client?.title || null;
+}
+
 export async function login(email: string, password: string) {
   const user = await prisma.user.findUnique({ where: { email: email.toLowerCase().trim() } });
   if (!user) return { ok: false, message: 'Invalid email or password' };
@@ -110,5 +123,5 @@ export async function login(email: string, password: string) {
 
   await prisma.user.update({ where: { id: user.id }, data: { failedLoginCount: 0, lockedUntil: null, lastLoginAt: new Date() } });
   await setSession(user.id);
-  return { ok: true, message: 'Logged in' };
+  return { ok: true, message: 'Logged in', role: user.role };
 }
