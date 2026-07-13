@@ -534,12 +534,6 @@ function SystemModule({ module }: { module: ModuleConfig; }) {
     calendar: ['Viewings', 'Meeting rooms', 'Contract renewals', 'Invoice due dates', 'Staff follow-ups', 'Maintenance SLAs'],
     'floor-plan': ['Available units', 'Occupied units', 'Reserved units', 'Expiring soon', 'Under maintenance', 'Vacant by location'],
     'payment-alerts': ['Due today', 'Overdue 1–30 days', 'Overdue 31–60 days', 'Overdue 60+ days', 'Stripe failed', 'Deposit refunds due'],
-    reports: ['Revenue by location', 'Lead sources', 'Occupancy', 'Staff activity', 'Meeting room revenue', 'Lost lead reasons'],
-    'accounting-exports': ['Invoices CSV', 'Payments CSV', 'Clients CSV', 'Deposits CSV', 'Bookings CSV', 'Recurring billing CSV'],
-    'automation-log': ['Queued actions', 'Completed actions', 'Failed actions', 'Retry needed', 'Email sent', 'WhatsApp created'],
-    'whatsapp-api': ['API disabled by default', 'Webhook URL', 'Phone Number ID', 'Access Token', 'Verify Token', 'Message logs'],
-    settings: ['Company settings', 'Stripe keys', 'SMTP settings', 'Security settings', 'Default theme', 'Locations'],
-    themes: ['Modern Blue', 'Purple Elegance', 'Green Fresh', 'Warm Sunset', 'Dark Mode', 'Minimal Clean'],
     dashboard: []
   } as Record<string, string[]>;
   return (

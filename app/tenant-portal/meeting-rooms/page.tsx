@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { fmtDate } from '@/lib/utils';
 import { Spinner } from '@/components/ui/Spinner';
 import { Plus } from 'lucide-react';
+import { durationMinutes, TENANT_MAX_BOOKING_MINUTES } from '@/lib/booking-time';
 
 type RecordRow = { id: string; title: string; status: string; data: Record<string, any>; createdAt: string };
 
@@ -34,8 +35,17 @@ export default function TenantMeetingRoomsPage() {
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
-    setSaving(true);
     setError('');
+    const minutes = durationMinutes(form.startTime, form.endTime);
+    if (!(minutes > 0)) {
+      setError('End time must be after start time.');
+      return;
+    }
+    if (minutes > TENANT_MAX_BOOKING_MINUTES) {
+      setError('Meeting rooms can be booked for a maximum of 2 hours.');
+      return;
+    }
+    setSaving(true);
     const res = await fetch('/api/tenant/meeting-room-bookings', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -55,6 +65,7 @@ export default function TenantMeetingRoomsPage() {
         <div>
           <h1 className="text-2xl font-black sm:text-3xl">Meeting Rooms</h1>
           <p className="mt-2 text-sm text-slate-500">Book an available meeting room and track your bookings.</p>
+          <p className="mt-1 text-sm text-slate-500">Free for tenants — maximum 2 hours per booking. Rooms are available 24/7 unless already booked.</p>
         </div>
         <button onClick={() => setShowForm(true)} className="btn-primary"><Plus className="mr-2 inline h-4 w-4" />Book a Room</button>
       </div>

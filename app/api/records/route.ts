@@ -54,7 +54,7 @@ export async function POST(req: NextRequest) {
   if (module === 'staff-users') {
     const password = String(data.password || '');
     if (!password) return NextResponse.json({ message: 'Password is required for new staff users' }, { status: 400 });
-    const role = data.role || 'SALES';
+    const role = data.role || 'TENANT';
     if (role === 'TENANT' && !data.clientRecordId) {
       return NextResponse.json({ message: 'Linked Company is required for the Tenant role' }, { status: 400 });
     }

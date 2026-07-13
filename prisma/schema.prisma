@@ -10,11 +10,7 @@ datasource db {
 
 enum UserRole {
   MASTER_ADMIN
-  MANAGER
-  SALES
   RECEPTION
-  FINANCE
-  OPERATIONS
   TENANT
 }
 
@@ -40,7 +36,7 @@ model User {
   name                String
   email               String       @unique
   passwordHash        String
-  role                UserRole     @default(SALES)
+  role                UserRole     @default(TENANT)
   status              UserStatus   @default(ACTIVE)
   mustChangePassword  Boolean      @default(true)
   theme               String       @default("warm-sunset")

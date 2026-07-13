@@ -12,21 +12,14 @@ import {
   ClipboardSignature,
   PackagePlus,
   DoorOpen,
-  BarChart3,
-  Settings,
   ShieldCheck,
-  Bot,
-  MessageCircle,
   Mail,
   KeyRound,
   UserCheck,
   RefreshCcw,
   BellRing,
   Map,
-  BriefcaseBusiness,
-  Palette,
-  Activity,
-  DatabaseBackup
+  BriefcaseBusiness
 } from 'lucide-react';
 
 export type FieldType = 'text' | 'email' | 'tel' | 'number' | 'money' | 'textarea' | 'select' | 'date' | 'time' | 'datetime' | 'checkbox' | 'checkbox-group' | 'file' | 'file-multi' | 'password';
@@ -321,8 +314,9 @@ export const modules: ModuleConfig[] = [
     icon: CalendarDays,
     defaultStatus: 'Requested',
     statuses: ['Requested', 'Confirmed', 'Paid', 'Completed', 'Cancelled'],
-    tableFields: ['customerName', 'roomName', 'bookingDate', 'startTime', 'endTime', 'totalCharge', 'status'],
+    tableFields: ['bookingType', 'customerName', 'roomName', 'bookingDate', 'startTime', 'endTime', 'totalCharge', 'status'],
     fields: [
+      { name: 'bookingType', label: 'Booking Type', type: 'select', options: ['Tenant', 'Public'] },
       { name: 'customerName', label: 'Customer Name', type: 'text', required: true },
       { name: 'telephone', label: 'Telephone', type: 'tel' },
       { name: 'email', label: 'Email', type: 'email' },
@@ -570,30 +564,6 @@ export const modules: ModuleConfig[] = [
     systemOnly: true
   },
   {
-    slug: 'reports',
-    title: 'Reports',
-    singular: 'Report',
-    group: 'Finance',
-    description: 'Occupancy, revenue, lead source, staff activity and location reports.',
-    icon: BarChart3,
-    statuses: [],
-    fields: [],
-    tableFields: [],
-    systemOnly: true
-  },
-  {
-    slug: 'accounting-exports',
-    title: 'Accounting Exports',
-    singular: 'Export',
-    group: 'Finance',
-    description: 'CSV exports for invoices, payments, clients, deposits and bookings.',
-    icon: DatabaseBackup,
-    statuses: [],
-    fields: [],
-    tableFields: [],
-    systemOnly: true
-  },
-  {
     slug: 'staff-users',
     title: 'Staff Users',
     singular: 'Staff User',
@@ -607,77 +577,10 @@ export const modules: ModuleConfig[] = [
       { name: 'clientRecordId', label: 'Linked Company (Tenant accounts only)', type: 'select', optionsSource: 'clients', autofill: { targetField: 'email', sourceDataField: 'email' } },
       { name: 'name', label: 'Name', type: 'text', required: true, hideWhen: { field: 'clientRecordId', notEmpty: true } },
       { name: 'email', label: 'Email', type: 'email', required: true },
-      { name: 'role', label: 'Role', type: 'select', options: ['MASTER_ADMIN', 'MANAGER', 'SALES', 'RECEPTION', 'FINANCE', 'OPERATIONS', 'TENANT'] },
+      { name: 'role', label: 'Role', type: 'select', options: ['MASTER_ADMIN', 'RECEPTION', 'TENANT'] },
       { name: 'password', label: 'Temporary Password', type: 'password' }
     ]
   },
-  {
-    slug: 'automation-rules',
-    title: 'Automation Rules',
-    singular: 'Automation Rule',
-    group: 'Admin',
-    description: 'Lead assignment, follow-up tasks, emails, WhatsApp replies and alerts.',
-    icon: Bot,
-    defaultStatus: 'Active',
-    statuses: ['Active', 'Paused'],
-    tableFields: ['ruleName', 'trigger', 'delayMinutes', 'status'],
-    fields: [
-      { name: 'ruleName', label: 'Rule Name', type: 'text', required: true },
-      { name: 'trigger', label: 'Trigger', type: 'select', options: ['New Web Form Lead', 'New Telephone Lead', 'New WhatsApp Lead', 'Lead Not Contacted', 'Quotation Sent', 'Invoice Overdue', 'Contract Expiring'] },
-      { name: 'condition', label: 'Condition', type: 'text' },
-      { name: 'assignTo', label: 'Assign To', type: 'text' },
-      { name: 'delayMinutes', label: 'Delay Minutes', type: 'number' },
-      { name: 'actionSummary', label: 'Actions', type: 'textarea', colSpan: 2 }
-    ]
-  },
-  {
-    slug: 'automation-log',
-    title: 'Automation Log',
-    singular: 'Automation Log',
-    group: 'Admin',
-    description: 'Shows automation actions, failures and queue processing.',
-    icon: Activity,
-    statuses: [],
-    fields: [],
-    tableFields: [],
-    systemOnly: true
-  },
-  {
-    slug: 'whatsapp-api',
-    title: 'WhatsApp API',
-    singular: 'WhatsApp API',
-    group: 'Admin',
-    description: 'Meta WhatsApp Cloud API settings, webhook URL and message logs.',
-    icon: MessageCircle,
-    statuses: [],
-    fields: [],
-    tableFields: [],
-    systemOnly: true
-  },
-  {
-    slug: 'settings',
-    title: 'Settings',
-    singular: 'Setting',
-    group: 'Admin',
-    description: 'Company details, Stripe keys, SMTP settings, themes and security controls.',
-    icon: Settings,
-    statuses: [],
-    fields: [],
-    tableFields: [],
-    systemOnly: true
-  },
-  {
-    slug: 'themes',
-    title: 'Themes',
-    singular: 'Theme',
-    group: 'Admin',
-    description: 'Modern Blue, Purple Elegance, Green Fresh, Warm Sunset, Dark Mode and Minimal Clean.',
-    icon: Palette,
-    statuses: [],
-    fields: [],
-    tableFields: [],
-    systemOnly: true
-  }
 ];
 
 export const moduleMap = Object.fromEntries(modules.map((m) => [m.slug, m]));
