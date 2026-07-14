@@ -1,11 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import { prisma } from '@/lib/db';
-import { getSettings } from '@/lib/settings';
+import { getStripeConfig } from '@/lib/stripe';
 
 export async function POST(req: NextRequest) {
-  const settings = await getSettings();
-  const secretKey = String(settings.stripeSecretKey || '');
+  const { secretKey } = getStripeConfig();
   const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET || '';
   if (!secretKey || !webhookSecret) return NextResponse.json({ message: 'Stripe webhook not configured' }, { status: 400 });
   const stripe = new Stripe(secretKey, { apiVersion: '2024-06-20' as any });

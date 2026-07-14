@@ -1,17 +1,17 @@
 import { NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import { prisma } from '@/lib/db';
-import { getSettings } from '@/lib/settings';
+import { getStripeConfig } from '@/lib/stripe';
 
 export async function POST(_: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const invoice = await prisma.record.findUnique({ where: { id } });
   if (!invoice || invoice.module !== 'invoices') return NextResponse.json({ message: 'Invoice not found' }, { status: 404 });
-  const settings = await getSettings();
-  if (!settings.stripeEnabled || !settings.stripeSecretKey) return NextResponse.json({ message: 'Stripe is not enabled' }, { status: 400 });
+  const { enabled, secretKey } = getStripeConfig();
+  if (!enabled) return NextResponse.json({ message: 'Stripe is not enabled' }, { status: 400 });
   const data = invoice.data as any;
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
-  const stripe = new Stripe(String(settings.stripeSecretKey), { apiVersion: '2024-06-20' as any });
+  const stripe = new Stripe(secretKey, { apiVersion: '2024-06-20' as any });
   const session = await stripe.checkout.sessions.create({
     mode: 'payment',
     customer_email: data.email || undefined,

@@ -4,8 +4,18 @@ import { ModuleConfig, moduleMap } from '@/lib/modules';
 import { currency, fmtDate } from '@/lib/utils';
 import { Spinner } from '@/components/ui/Spinner';
 import { Combobox } from '@/components/ui/Combobox';
+import { InvoiceForm } from '@/components/InvoiceForm';
+import { QuotationForm } from '@/components/QuotationForm';
 import { Download, Eye, EyeOff, FileText, Plus, RefreshCw, Send, Trash2, Upload } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
+
+function WhatsAppIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="currentColor" className={className} aria-hidden="true">
+      <path d="M12.04 2c-5.52 0-10 4.48-10 10 0 1.76.46 3.48 1.34 5L2 22l5.14-1.35A9.96 9.96 0 0 0 12.04 22c5.52 0 10-4.48 10-10s-4.48-10-10-10Zm0 18.2a8.2 8.2 0 0 1-4.18-1.15l-.3-.18-3.05.8.81-2.97-.2-.3a8.2 8.2 0 1 1 6.92 3.8Zm4.5-6.14c-.25-.12-1.46-.72-1.68-.8-.23-.08-.4-.12-.56.12-.17.25-.64.8-.79.96-.14.17-.29.19-.54.06-.25-.12-1.04-.38-1.98-1.22-.73-.65-1.23-1.46-1.37-1.7-.14-.25-.02-.39.11-.51.11-.11.25-.29.37-.43.12-.15.16-.25.24-.42.08-.17.04-.31-.02-.43-.06-.12-.56-1.36-.77-1.86-.2-.48-.41-.42-.56-.43h-.48c-.17 0-.43.06-.66.31-.23.25-.86.85-.86 2.07 0 1.22.89 2.4 1.01 2.57.12.17 1.75 2.68 4.25 3.75.59.26 1.06.41 1.42.53.6.19 1.14.16 1.57.1.48-.07 1.46-.6 1.67-1.17.21-.58.21-1.07.14-1.17-.06-.11-.23-.17-.48-.29Z" />
+    </svg>
+  );
+}
 
 type RecordRow = {
   id: string;
@@ -72,6 +82,9 @@ export function ModulePage({ slug }: { slug: string }) {
   const [transferring, setTransferring] = useState<Record<string, boolean>>({});
   const [confirmTransferRow, setConfirmTransferRow] = useState<RecordRow | null>(null);
   const [transferError, setTransferError] = useState('');
+  const [invoiceFromBookingRow, setInvoiceFromBookingRow] = useState<RecordRow | null>(null);
+  const [sendingEmail, setSendingEmail] = useState<Record<string, boolean>>({});
+  const [emailSendError, setEmailSendError] = useState<Record<string, string>>({});
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<RecordRow | null>(null);
   const [query, setQuery] = useState('');
@@ -262,6 +275,23 @@ export function ModulePage({ slug }: { slug: string }) {
     }
   }
 
+  async function sendInvoiceEmailFor(invoiceId: string, key: string) {
+    return sendDocumentEmailFor('invoices', invoiceId, key);
+  }
+
+  async function sendDocumentEmailFor(kind: 'invoices' | 'quotes', id: string, key: string) {
+    setSendingEmail((s) => ({ ...s, [key]: true }));
+    setEmailSendError((e) => ({ ...e, [key]: '' }));
+    try {
+      const res = await fetch(`/api/${kind}/${id}/email`, { method: 'POST' });
+      const json = await res.json();
+      if (!res.ok) { setEmailSendError((e) => ({ ...e, [key]: json.message || 'Failed to send' })); return; }
+      await load();
+    } finally {
+      setSendingEmail((s) => ({ ...s, [key]: false }));
+    }
+  }
+
   function exportCsv() {
     const headings = ['title', 'status', ...module.tableFields, 'createdAt'];
     const csv = [headings.join(',')].concat(filtered.map((row) => headings.map((h) => `"${String(valueFor(row, h)).replaceAll('"', '""')}"`).join(','))).join('\n');
@@ -295,7 +325,15 @@ export function ModulePage({ slug }: { slug: string }) {
         </div>
       </div>
 
-      {showForm && (
+      {showForm && module.slug === 'invoices' && (
+        <InvoiceForm existing={editing} onClose={() => setShowForm(false)} onSaved={load} />
+      )}
+
+      {showForm && module.slug === 'quotations' && (
+        <QuotationForm existing={editing} onClose={() => setShowForm(false)} onSaved={load} />
+      )}
+
+      {showForm && module.slug !== 'invoices' && module.slug !== 'quotations' && (
         <div className="card p-6">
           <div className="mb-5 flex items-center justify-between">
             <h2 className="text-xl font-bold">{editing ? 'Edit' : 'Add'} {module.singular}</h2>
@@ -474,6 +512,72 @@ export function ModulePage({ slug }: { slug: string }) {
                         {transferring[row.id] ? 'Transferring…' : 'Transfer to Quote'}
                       </button>
                     )}
+                    {module.slug === 'meeting-room-bookings' && (
+                      row.data.invoiceId ? (
+                        <span className="mr-2 inline-flex flex-col items-end">
+                          <button
+                            onClick={() => sendInvoiceEmailFor(row.data.invoiceId, row.id)}
+                            disabled={sendingEmail[row.id]}
+                            title="Resend Invoice Email"
+                            className="rounded-lg px-2 py-1 text-xs font-semibold text-blue-600 hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-40"
+                          >
+                            <FileText className="inline h-3.5 w-3.5 mr-1" />
+                            {sendingEmail[row.id] ? 'Sending…' : 'Resend Invoice'}
+                          </button>
+                          {emailSendError[row.id] && <span className="mt-0.5 text-[11px] font-medium text-red-600">{emailSendError[row.id]}</span>}
+                        </span>
+                      ) : !row.data.email ? (
+                        <span className="mr-2 rounded-lg px-2 py-1 text-xs font-semibold text-slate-400" title="This booking has no email on file">No Email</span>
+                      ) : (
+                        <button
+                          onClick={() => setInvoiceFromBookingRow(row)}
+                          title="Create Invoice"
+                          className="mr-2 rounded-lg px-2 py-1 text-xs font-semibold text-blue-600 hover:bg-blue-50"
+                        >
+                          <FileText className="inline h-3.5 w-3.5 mr-1" />
+                          Create Invoice
+                        </button>
+                      )
+                    )}
+                    {module.slug === 'invoices' && row.data.email && (
+                      <span className="mr-2 inline-flex flex-col items-end">
+                        <button
+                          onClick={() => sendInvoiceEmailFor(row.id, row.id)}
+                          disabled={sendingEmail[row.id]}
+                          title={row.data.invoiceEmailSentAt ? 'Resend Invoice Email' : 'Send Invoice Email'}
+                          className="rounded-lg px-2 py-1 text-xs font-semibold text-blue-600 hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-40"
+                        >
+                          <Send className="inline h-3.5 w-3.5 mr-1" />
+                          {sendingEmail[row.id] ? 'Sending…' : row.data.invoiceEmailSentAt ? 'Resend Email' : 'Send Email'}
+                        </button>
+                        {emailSendError[row.id] && <span className="mt-0.5 text-[11px] font-medium text-red-600">{emailSendError[row.id]}</span>}
+                      </span>
+                    )}
+                    {module.slug === 'quotations' && row.data.email && (
+                      <span className="mr-2 inline-flex flex-col items-end">
+                        <button
+                          onClick={() => sendDocumentEmailFor('quotes', row.id, row.id)}
+                          disabled={sendingEmail[row.id]}
+                          title={row.data.quoteEmailSentAt ? 'Resend Quotation Email' : 'Send Quotation Email'}
+                          className="rounded-lg px-2 py-1 text-xs font-semibold text-blue-600 hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-40"
+                        >
+                          <Send className="inline h-3.5 w-3.5 mr-1" />
+                          {sendingEmail[row.id] ? 'Sending…' : row.data.quoteEmailSentAt ? 'Resend Email' : 'Send Email'}
+                        </button>
+                        {emailSendError[row.id] && <span className="mt-0.5 text-[11px] font-medium text-red-600">{emailSendError[row.id]}</span>}
+                      </span>
+                    )}
+                    {module.slug === 'clients' && row.data.telephone && (
+                      <a
+                        href={`https://wa.me/${String(row.data.telephone).replace(/[^0-9]/g, '')}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        title="Chat on WhatsApp"
+                        className="mr-2 inline-flex rounded-lg p-2 text-green-600 hover:bg-green-50"
+                      >
+                        <WhatsAppIcon className="h-4 w-4" />
+                      </a>
+                    )}
                     <button onClick={() => startEdit(row)} className="mr-2 rounded-lg p-2 text-slate-500 hover:bg-slate-100"><Eye className="h-4 w-4" /></button>
                     <button onClick={() => remove(row.id)} className="rounded-lg p-2 text-red-500 hover:bg-red-50"><Trash2 className="h-4 w-4" /></button>
                   </td>
@@ -523,6 +627,16 @@ export function ModulePage({ slug }: { slug: string }) {
             </div>
           </div>
         </div>
+      )}
+
+      {invoiceFromBookingRow && (
+        <InvoiceForm
+          existing={null}
+          fromBooking={invoiceFromBookingRow}
+          modal
+          onClose={() => setInvoiceFromBookingRow(null)}
+          onSaved={load}
+        />
       )}
     </div>
   );

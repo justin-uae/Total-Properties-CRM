@@ -6,14 +6,14 @@ export const defaultSettings = {
   defaultTheme: 'warm-sunset',
   addressLocation1: '',
   addressLocation2: '',
-  stripeEnabled: false,
-  stripePublishableKey: '',
-  stripeSecretKey: '',
   smtpEnabled: false,
   whatsappApiEnabled: false,
   whatsappPhoneNumberId: '',
   whatsappBusinessAccountId: '',
   whatsappAccessToken: '',
+  whatsappReminderTemplateName: 'expiry_reminder',
+  whatsappReminderTemplateLang: 'en_US',
+  documentExpiryReminderDays: 7,
   requirePasswordChange: true
 };
 

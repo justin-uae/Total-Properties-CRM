@@ -4,7 +4,25 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { LogOut, Menu, Search, Bell, ChevronDown } from 'lucide-react';
 import { moduleGroups, modules, themes } from '@/lib/modules';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+
+const NOTIFICATIONS_POLL_MS = 3 * 60 * 1000;
+
+type NotificationItem = {
+  id: string;
+  module: 'contracts' | 'documents';
+  label: string;
+  clientName: string;
+  expiryDate: string;
+  overdue: boolean;
+  reminderSent: boolean;
+};
+
+function fmtShortDate(value: string) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+}
 
 export type ShellUser = {
   id: string;
@@ -26,6 +44,9 @@ export function AppShell({ user, children }: { user: ShellUser; children: React.
   const router = useRouter();
   const [theme, setTheme] = useState(user.theme || 'warm-sunset');
   const [open, setOpen] = useState(false);
+  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
+  const [notifOpen, setNotifOpen] = useState(false);
+  const notifRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
@@ -36,6 +57,24 @@ export function AppShell({ user, children }: { user: ShellUser; children: React.
     const saved = localStorage.getItem('tbc-theme');
     if (saved) setTheme(saved);
   }, []);
+
+  useEffect(() => {
+    function loadNotifications() {
+      fetch('/api/notifications').then((r) => r.json()).then((json) => setNotifications(json.items || [])).catch(() => {});
+    }
+    loadNotifications();
+    const interval = setInterval(loadNotifications, NOTIFICATIONS_POLL_MS);
+    return () => clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
+    if (!notifOpen) return;
+    function onClickOutside(e: MouseEvent) {
+      if (notifRef.current && !notifRef.current.contains(e.target as Node)) setNotifOpen(false);
+    }
+    document.addEventListener('mousedown', onClickOutside);
+    return () => document.removeEventListener('mousedown', onClickOutside);
+  }, [notifOpen]);
 
   const grouped = useMemo(() => {
     return moduleGroups.map((group) => ({
@@ -102,10 +141,43 @@ export function AppShell({ user, children }: { user: ShellUser; children: React.
             <select value={theme} onChange={(e) => setTheme(e.target.value)} className="input hidden max-w-[160px] sm:block lg:max-w-[190px]">
               {themes.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
             </select>
-            <button className="relative shrink-0 rounded-xl border border-slate-200 p-2.5 text-slate-600 hover:bg-slate-50 sm:p-3">
-              <Bell className="h-4 w-4" />
-              <span className="absolute -right-1 -top-1 rounded-full bg-red-500 px-1.5 text-[10px] font-bold text-white">3</span>
-            </button>
+            <div className="relative shrink-0" ref={notifRef}>
+              <button onClick={() => setNotifOpen((v) => !v)} className="relative rounded-xl border border-slate-200 p-2.5 text-slate-600 hover:bg-slate-50 sm:p-3">
+                <Bell className="h-4 w-4" />
+                {notifications.length > 0 && (
+                  <span className="absolute -right-1 -top-1 rounded-full bg-red-500 px-1.5 text-[10px] font-bold text-white">{notifications.length}</span>
+                )}
+              </button>
+              {notifOpen && (
+                <div className="absolute right-0 z-50 mt-2 max-h-96 w-80 overflow-y-auto rounded-2xl border border-slate-200 bg-white shadow-xl sm:w-96">
+                  <div className="border-b border-slate-100 p-4">
+                    <p className="font-bold">Expiry Notifications</p>
+                    <p className="text-xs text-slate-500">Contracts and documents expiring within 30 days.</p>
+                  </div>
+                  {notifications.length === 0 ? (
+                    <p className="p-6 text-center text-sm text-slate-500">No upcoming expiries.</p>
+                  ) : (
+                    <div className="divide-y divide-slate-100">
+                      {notifications.map((item) => (
+                        <Link
+                          key={`${item.module}-${item.id}`}
+                          href={`/modules/${item.module}`}
+                          onClick={() => setNotifOpen(false)}
+                          className="block px-4 py-3 hover:bg-slate-50"
+                        >
+                          <p className="text-sm font-semibold">{item.label || 'Untitled'}</p>
+                          <p className="text-xs text-slate-500">{item.clientName}</p>
+                          <p className={`mt-1 text-xs font-semibold ${item.overdue ? 'text-red-600' : 'text-orange-600'}`}>
+                            {item.overdue ? 'Overdue since' : 'Expires'} {fmtShortDate(item.expiryDate)}
+                            {item.reminderSent ? ' · WhatsApp sent' : ''}
+                          </p>
+                        </Link>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
             <div className="hidden items-center gap-2 rounded-2xl border border-slate-200 bg-white px-3 py-2 sm:flex">
               <div className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-[rgb(var(--accent))] text-sm font-bold text-white sm:h-9 sm:w-9">{user.name.slice(0, 2).toUpperCase()}</div>
               <div className="hidden text-sm lg:block">

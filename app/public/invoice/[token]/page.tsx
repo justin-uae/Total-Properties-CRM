@@ -2,6 +2,7 @@ import { prisma } from '@/lib/db';
 import { currency } from '@/lib/utils';
 import { notFound } from 'next/navigation';
 import { PrintButton } from '@/components/PrintButton';
+import { getStripeConfig } from '@/lib/stripe';
 
 export default async function PublicInvoicePage({ params }: { params: Promise<{ token: string }> }) {
   const { token } = await params;
@@ -9,9 +10,7 @@ export default async function PublicInvoicePage({ params }: { params: Promise<{ 
   if (!invoice || invoice.module !== 'invoices') notFound();
   await prisma.record.update({ where: { id: invoice.id }, data: { viewedAt: new Date(), viewCount: { increment: 1 }, status: invoice.status === 'Sent' ? 'Viewed' : invoice.status } });
   const data = invoice.data as any;
-  const settingsRows = await prisma.setting.findMany();
-  const settings = Object.fromEntries(settingsRows.map((s) => [s.key, s.value]));
-  const stripeEnabled = Boolean(settings.stripeEnabled);
+  const stripeEnabled = getStripeConfig().enabled;
   return (
     <div className="min-h-screen bg-slate-100 p-6">
       <div className="mx-auto max-w-3xl rounded-3xl bg-white p-8 shadow-soft">

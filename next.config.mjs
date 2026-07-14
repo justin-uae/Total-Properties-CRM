@@ -7,6 +7,7 @@ try {
 } catch {}
 
 const nextConfig = {
+  serverExternalPackages: ['pdfkit'],
   experimental: {
     serverActions: {
       allowedOrigins

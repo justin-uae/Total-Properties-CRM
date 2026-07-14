@@ -41,9 +41,6 @@ async function main() {
     defaultTheme: 'warm-sunset',
     addressLocation1: process.env.ADDRESS_LOCATION_1 || '',
     addressLocation2: process.env.ADDRESS_LOCATION_2 || '',
-    stripeEnabled: false,
-    stripePublishableKey: '',
-    stripeSecretKey: '',
     whatsappApiEnabled: false
   };
   for (const [key, value] of Object.entries(settings)) {
