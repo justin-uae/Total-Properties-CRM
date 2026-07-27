@@ -41,18 +41,17 @@ export async function sendInvoiceEmail(invoiceId: string) {
 
   const attachments = [];
   if (Array.isArray(data.items) && data.items.length > 0) {
-    const pdfBuffer = await generateInvoicePdfBuffer(
-      {
-        invoiceNumber: data.invoiceNumber || '',
-        clientName: data.clientName || '',
-        email: data.email,
-        issueDate: data.issueDate,
-        dueDate: data.dueDate,
-        subject: data.subject,
-        items: data.items
-      },
-      { companyName: settings.companyName as string, addressLocation1: settings.addressLocation1 as string, addressLocation2: settings.addressLocation2 as string }
-    );
+    const pdfBuffer = await generateInvoicePdfBuffer({
+      invoiceNumber: data.invoiceNumber || '',
+      clientName: data.clientName || '',
+      email: data.email,
+      issueDate: data.issueDate,
+      dueDate: data.dueDate,
+      subject: data.subject,
+      items: data.items,
+      vatRegistered: data.vatRegistered,
+      trnNumber: data.trnNumber
+    });
     attachments.push({ filename: `Invoice-${data.invoiceNumber || invoice.id}.pdf`, content: pdfBuffer });
   }
 
@@ -102,18 +101,17 @@ export async function sendQuotationEmail(quoteId: string) {
 
   const attachments = [];
   if (Array.isArray(data.items) && data.items.length > 0) {
-    const pdfBuffer = await generateQuotationPdfBuffer(
-      {
-        quoteNumber: data.quoteNumber || '',
-        clientName: data.clientName || '',
-        email: data.email,
-        issueDate: data.issueDate,
-        validUntil: data.validUntil,
-        subject: data.subject,
-        items: data.items
-      },
-      { companyName: settings.companyName as string, addressLocation1: settings.addressLocation1 as string, addressLocation2: settings.addressLocation2 as string }
-    );
+    const pdfBuffer = await generateQuotationPdfBuffer({
+      quoteNumber: data.quoteNumber || '',
+      clientName: data.clientName || '',
+      email: data.email,
+      issueDate: data.issueDate,
+      validUntil: data.validUntil,
+      subject: data.subject,
+      items: data.items,
+      vatRegistered: data.vatRegistered,
+      trnNumber: data.trnNumber
+    });
     attachments.push({ filename: `Quotation-${data.quoteNumber || quote.id}.pdf`, content: pdfBuffer });
   }
 

@@ -23,7 +23,14 @@ export default async function PublicInvoicePage({ params }: { params: Promise<{ 
           <span className="rounded-full bg-orange-50 px-4 py-2 text-sm font-bold text-orange-700">{invoice.status}</span>
         </div>
         <div className="mt-8 grid gap-6 sm:grid-cols-2">
-          <div><p className="label">Bill To</p><p className="font-bold">{data.clientName}</p><p className="text-sm text-slate-500">{data.email}</p></div>
+          <div>
+            <p className="label">Bill To</p>
+            <p className="font-bold">{data.clientName}</p>
+            <p className="text-sm text-slate-500">{data.email}</p>
+            {data.vatRegistered === 'VAT Registered' && data.trnNumber && (
+              <p className="text-sm text-slate-500">TRN: {data.trnNumber}</p>
+            )}
+          </div>
           <div className="text-left sm:text-right"><p className="label">Amount Due</p><p className="text-4xl font-black">{currency(data.amount)}</p><p className="text-sm text-slate-500">Due {data.dueDate || '—'}</p></div>
         </div>
         <div className="mt-8 rounded-2xl border border-slate-200 p-5">

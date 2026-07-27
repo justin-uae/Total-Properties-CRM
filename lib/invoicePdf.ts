@@ -1,6 +1,7 @@
 import PDFDocument from 'pdfkit';
 import { currency, fmtDate } from '@/lib/utils';
 import { computeInvoiceTotals, InvoiceItem, lineAmounts } from '@/lib/invoice-calc';
+import { drawLetterhead, drawTermsAndConditions } from '@/lib/pdfBranding';
 
 type InvoicePdfData = {
   invoiceNumber: string;
@@ -10,12 +11,8 @@ type InvoicePdfData = {
   dueDate?: string;
   subject?: string;
   items: InvoiceItem[];
-};
-
-type CompanyInfo = {
-  companyName?: string;
-  addressLocation1?: string;
-  addressLocation2?: string;
+  vatRegistered?: string;
+  trnNumber?: string;
 };
 
 const MARGIN = 50;
@@ -37,7 +34,7 @@ function shortCurrency(value: number) {
   return currency(value).replace(/^AED\s?/, '');
 }
 
-export function generateInvoicePdfBuffer(invoice: InvoicePdfData, company: CompanyInfo): Promise<Buffer> {
+export function generateInvoicePdfBuffer(invoice: InvoicePdfData): Promise<Buffer> {
   return new Promise((resolve, reject) => {
     const doc = new PDFDocument({ size: 'A4', margin: MARGIN });
     const chunks: Buffer[] = [];
@@ -45,27 +42,19 @@ export function generateInvoicePdfBuffer(invoice: InvoicePdfData, company: Compa
     doc.on('end', () => resolve(Buffer.concat(chunks)));
     doc.on('error', reject);
 
-    const companyName = company.companyName || 'Total Business Centres';
     const totals = computeInvoiceTotals(invoice.items);
 
-    // Header
-    doc.fillColor(ACCENT).fontSize(20).font('Helvetica-Bold').text(companyName, MARGIN, MARGIN);
-    doc.fillColor('#334155').fontSize(9).font('Helvetica');
-    if (company.addressLocation1) doc.text(company.addressLocation1, MARGIN, doc.y + 4);
-    if (company.addressLocation2) doc.text(company.addressLocation2, MARGIN, doc.y + 2);
-
-    doc.fillColor('#0f172a').fontSize(22).font('Helvetica-Bold').text('INVOICE', MARGIN, MARGIN, { align: 'right', width: CONTENT_WIDTH });
-    doc.fontSize(10).font('Helvetica').fillColor('#475569').text(`# ${invoice.invoiceNumber}`, { align: 'right', width: CONTENT_WIDTH });
-
-    doc.moveDown(2);
-    const afterHeaderY = Math.max(doc.y, MARGIN + 70);
-    doc.y = afterHeaderY;
+    drawLetterhead(doc, MARGIN, CONTENT_WIDTH, 'INVOICE', invoice.invoiceNumber);
+    doc.moveDown(1.5);
 
     // Bill To / Date block
     const billToY = doc.y;
     doc.fillColor('#94a3b8').fontSize(9).font('Helvetica-Bold').text('BILL TO', MARGIN, billToY);
     doc.fillColor('#0f172a').fontSize(11).font('Helvetica-Bold').text(invoice.clientName || '—', MARGIN, doc.y + 2);
     if (invoice.email) doc.fillColor('#475569').fontSize(9).font('Helvetica').text(invoice.email, MARGIN, doc.y + 2);
+    if (invoice.vatRegistered === 'VAT Registered' && invoice.trnNumber) {
+      doc.fillColor('#475569').fontSize(9).font('Helvetica').text(`TRN: ${invoice.trnNumber}`, MARGIN, doc.y + 2);
+    }
 
     doc.fillColor('#94a3b8').fontSize(9).font('Helvetica-Bold').text('ISSUE DATE', MARGIN, billToY, { align: 'right', width: CONTENT_WIDTH });
     doc.fillColor('#0f172a').fontSize(10).font('Helvetica').text(invoice.issueDate ? fmtDate(invoice.issueDate) : '—', { align: 'right', width: CONTENT_WIDTH });
@@ -144,7 +133,9 @@ export function generateInvoicePdfBuffer(invoice: InvoicePdfData, company: Compa
     doc.moveDown(0.3);
     totalsRow('Total (AED)', currency(totals.total), true);
 
-    doc.moveDown(3);
+    drawTermsAndConditions(doc, MARGIN, CONTENT_WIDTH);
+
+    doc.moveDown(1.5);
     doc.fillColor('#94a3b8').fontSize(9).font('Helvetica').text('Thank you for your business.', MARGIN, doc.y, { width: CONTENT_WIDTH });
 
     doc.end();

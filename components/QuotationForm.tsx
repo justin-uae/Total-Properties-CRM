@@ -17,6 +17,8 @@ type QuotationFormValues = {
   validUntil: string;
   subject: string;
   items: InvoiceItem[];
+  vatRegistered: string;
+  trnNumber: string;
 };
 
 function todayIso() {
@@ -39,7 +41,9 @@ export function QuotationForm({ existing, onClose, onSaved }: { existing: Record
     issueDate: existing?.data.issueDate || todayIso(),
     validUntil: existing?.data.validUntil || daysFromNowIso(3),
     subject: existing?.data.subject || '',
-    items: existing?.data.items?.length ? existing.data.items : [emptyInvoiceItem()]
+    items: existing?.data.items?.length ? existing.data.items : [emptyInvoiceItem()],
+    vatRegistered: existing?.data.vatRegistered || '',
+    trnNumber: existing?.data.trnNumber || ''
   }));
   const [mode, setMode] = useState<'form' | 'preview'>('form');
   const [saving, setSaving] = useState(false);
@@ -71,7 +75,13 @@ export function QuotationForm({ existing, onClose, onSaved }: { existing: Record
 
   function pickClient(name: string) {
     const match = clients.find((c) => (c.data.companyName || c.title) === name);
-    setValues((v) => ({ ...v, clientName: name, email: match?.data.email || v.email }));
+    setValues((v) => ({
+      ...v,
+      clientName: name,
+      email: match?.data.email || v.email,
+      vatRegistered: match?.data.vatRegistered || '',
+      trnNumber: match?.data.vatRegistered === 'VAT Registered' ? match?.data.trnNumber || '' : ''
+    }));
   }
 
   function buildData() {
@@ -88,7 +98,9 @@ export function QuotationForm({ existing, onClose, onSaved }: { existing: Record
       taxTotal: totals.taxTotal,
       total: totals.total,
       amount: totals.total,
-      description: values.subject
+      description: values.subject,
+      vatRegistered: values.vatRegistered,
+      trnNumber: values.vatRegistered === 'VAT Registered' ? values.trnNumber : ''
     };
   }
 
@@ -201,6 +213,9 @@ export function QuotationForm({ existing, onClose, onSaved }: { existing: Record
                   placeholder="Client email"
                   onChange={(e) => setValues((v) => ({ ...v, email: e.target.value }))}
                 />
+                {values.vatRegistered === 'VAT Registered' && (
+                  <p className="mt-2 text-xs font-medium text-slate-500">TRN: <span className="font-semibold text-slate-700">{values.trnNumber || '—'}</span></p>
+                )}
               </div>
               <div className="text-left sm:text-right">
                 {field('Quote Date', <input className="input" type="date" value={values.issueDate} onChange={(e) => setValues((v) => ({ ...v, issueDate: e.target.value }))} />)}
@@ -279,6 +294,15 @@ export function QuotationForm({ existing, onClose, onSaved }: { existing: Record
         {field('Date', <input className="input" type="date" value={values.issueDate} onChange={(e) => setValues((v) => ({ ...v, issueDate: e.target.value }))} />)}
         {field('Subject', <input className="input" placeholder="e.g. Office Space Proposal" value={values.subject} onChange={(e) => setValues((v) => ({ ...v, subject: e.target.value }))} />)}
         {field('Valid Until', <input className="input" type="date" value={values.validUntil} onChange={(e) => setValues((v) => ({ ...v, validUntil: e.target.value }))} />)}
+        {field('VAT Registration', (
+          <select className="input" value={values.vatRegistered} onChange={(e) => setValues((v) => ({ ...v, vatRegistered: e.target.value, trnNumber: e.target.value === 'VAT Registered' ? v.trnNumber : '' }))}>
+            <option value="">Select...</option>
+            <option value="VAT Registered">VAT Registered</option>
+            <option value="Non VAT Registered">Non VAT Registered</option>
+          </select>
+        ))}
+        {values.vatRegistered === 'VAT Registered' &&
+          field('Customer TRN (15-digit)', <input className="input" placeholder="Enter your customer's 15-digit TRN" value={values.trnNumber} onChange={(e) => setValues((v) => ({ ...v, trnNumber: e.target.value }))} />)}
       </div>
 
       <div className="mt-6">

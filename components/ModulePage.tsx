@@ -346,7 +346,10 @@ export function ModulePage({ slug }: { slug: string }) {
                 {module.statuses.map((s) => <option key={s} value={s}>{s}</option>)}
               </select>
             </div>
-            {module.fields.filter((field) => !(field.hideWhen && Boolean(form[field.hideWhen.field]) === Boolean(field.hideWhen.notEmpty))).map((field) => (
+            {module.fields
+              .filter((field) => !(field.hideWhen && Boolean(form[field.hideWhen.field]) === Boolean(field.hideWhen.notEmpty)))
+              .filter((field) => !field.showWhen || form[field.showWhen.field] === field.showWhen.equals)
+              .map((field) => (
               <div key={field.name} className={`min-w-0${field.colSpan === 2 ? ' md:col-span-2' : ''}`}>
                 <label className="label">{field.label}{field.required ? ' *' : ''}</label>
                 {field.type === 'textarea' ? (
@@ -645,7 +648,6 @@ export function ModulePage({ slug }: { slug: string }) {
 function SystemModule({ module }: { module: ModuleConfig; }) {
   const cards = {
     'reception-dashboard': ['Visitors today', 'Mail waiting', 'Rooms booked', 'Open maintenance', 'Access returns due', 'Walk-in leads'],
-    calendar: ['Viewings', 'Meeting rooms', 'Contract renewals', 'Invoice due dates', 'Staff follow-ups', 'Maintenance SLAs'],
     'floor-plan': ['Available units', 'Occupied units', 'Reserved units', 'Expiring soon', 'Under maintenance', 'Vacant by location'],
     'payment-alerts': ['Due today', 'Overdue 1–30 days', 'Overdue 31–60 days', 'Overdue 60+ days', 'Stripe failed', 'Deposit refunds due'],
     dashboard: []

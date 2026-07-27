@@ -38,6 +38,8 @@ export type ModuleField = {
   autofill?: { targetField: string; sourceDataField: string };
   /** Hide this field while the named field has (or lacks) a value. */
   hideWhen?: { field: string; notEmpty?: boolean };
+  /** Only show this field when the named field's value equals the given value. */
+  showWhen?: { field: string; equals: string };
   /** For type 'checkbox-group': several independent checkboxes rendered inline on one row, each storing its own boolean under form[name]. */
   groupFields?: { name: string; label: string }[];
   placeholder?: string;
@@ -59,6 +61,7 @@ export type ModuleConfig = {
 };
 
 export const serviceTypes = ['Virtual Office', 'Co Working Office', 'Private Office', 'Meeting Room'];
+export const vatStatuses = ['VAT Registered', 'Non VAT Registered'];
 export const leadSources = ['Website', 'Telephone', 'WhatsApp', 'Walk-in', 'Google Ads', 'SEO', 'Referral', 'Instagram', 'Facebook', 'Agent/Broker', 'Existing Customer'];
 export const themes = [
   { id: 'modern-blue', name: 'Modern Blue' },
@@ -373,6 +376,8 @@ export const modules: ModuleConfig[] = [
       { name: 'tradeLicenseNumber', label: 'Trade Licence Number', type: 'text' },
       { name: 'serviceType', label: 'Service Type', type: 'select', options: serviceTypes },
       { name: 'location', label: 'Location', type: 'text' },
+      { name: 'vatRegistered', label: 'VAT Registration', type: 'select', options: vatStatuses },
+      { name: 'trnNumber', label: 'Customer TRN (15-digit)', type: 'text', placeholder: 'Enter your customer\'s 15-digit TRN', showWhen: { field: 'vatRegistered', equals: 'VAT Registered' } },
       { name: 'notes', label: 'Notes', type: 'textarea', colSpan: 2 }
     ]
   },

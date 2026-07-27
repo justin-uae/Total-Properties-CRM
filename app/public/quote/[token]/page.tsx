@@ -14,6 +14,9 @@ export default async function PublicQuotePage({ params }: { params: Promise<{ to
         <p className="text-sm font-bold uppercase tracking-widest text-orange-600">Total Business Centres</p>
         <h1 className="mt-2 text-3xl font-black">Quotation {data.quoteNumber}</h1>
         <p className="mt-2 text-slate-500">Prepared for {data.clientName}</p>
+        {data.vatRegistered === 'VAT Registered' && data.trnNumber && (
+          <p className="text-sm text-slate-500">TRN: {data.trnNumber}</p>
+        )}
         <div className="mt-8 rounded-2xl bg-orange-50 p-6">
           <p className="text-sm font-bold text-orange-700">Proposal Value</p>
           <p className="mt-1 text-4xl font-black">{currency(data.amount)}</p>

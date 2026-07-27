@@ -1,6 +1,7 @@
 import PDFDocument from 'pdfkit';
 import { currency, fmtDate } from '@/lib/utils';
 import { computeInvoiceTotals, InvoiceItem, lineAmounts } from '@/lib/invoice-calc';
+import { drawLetterhead, drawTermsAndConditions } from '@/lib/pdfBranding';
 
 type QuotationPdfData = {
   quoteNumber: string;
@@ -10,12 +11,8 @@ type QuotationPdfData = {
   validUntil?: string;
   subject?: string;
   items: InvoiceItem[];
-};
-
-type CompanyInfo = {
-  companyName?: string;
-  addressLocation1?: string;
-  addressLocation2?: string;
+  vatRegistered?: string;
+  trnNumber?: string;
 };
 
 const MARGIN = 50;
@@ -37,7 +34,7 @@ function shortCurrency(value: number) {
   return currency(value).replace(/^AED\s?/, '');
 }
 
-export function generateQuotationPdfBuffer(quote: QuotationPdfData, company: CompanyInfo): Promise<Buffer> {
+export function generateQuotationPdfBuffer(quote: QuotationPdfData): Promise<Buffer> {
   return new Promise((resolve, reject) => {
     const doc = new PDFDocument({ size: 'A4', margin: MARGIN });
     const chunks: Buffer[] = [];
@@ -45,27 +42,19 @@ export function generateQuotationPdfBuffer(quote: QuotationPdfData, company: Com
     doc.on('end', () => resolve(Buffer.concat(chunks)));
     doc.on('error', reject);
 
-    const companyName = company.companyName || 'Total Business Centres';
     const totals = computeInvoiceTotals(quote.items);
 
-    // Header
-    doc.fillColor(ACCENT).fontSize(20).font('Helvetica-Bold').text(companyName, MARGIN, MARGIN);
-    doc.fillColor('#334155').fontSize(9).font('Helvetica');
-    if (company.addressLocation1) doc.text(company.addressLocation1, MARGIN, doc.y + 4);
-    if (company.addressLocation2) doc.text(company.addressLocation2, MARGIN, doc.y + 2);
-
-    doc.fillColor('#0f172a').fontSize(22).font('Helvetica-Bold').text('QUOTATION', MARGIN, MARGIN, { align: 'right', width: CONTENT_WIDTH });
-    doc.fontSize(10).font('Helvetica').fillColor('#475569').text(`# ${quote.quoteNumber}`, { align: 'right', width: CONTENT_WIDTH });
-
-    doc.moveDown(2);
-    const afterHeaderY = Math.max(doc.y, MARGIN + 70);
-    doc.y = afterHeaderY;
+    drawLetterhead(doc, MARGIN, CONTENT_WIDTH, 'QUOTATION', quote.quoteNumber);
+    doc.moveDown(1.5);
 
     // Bill To / Date block
     const billToY = doc.y;
     doc.fillColor('#94a3b8').fontSize(9).font('Helvetica-Bold').text('BILL TO', MARGIN, billToY);
     doc.fillColor('#0f172a').fontSize(11).font('Helvetica-Bold').text(quote.clientName || '—', MARGIN, doc.y + 2);
     if (quote.email) doc.fillColor('#475569').fontSize(9).font('Helvetica').text(quote.email, MARGIN, doc.y + 2);
+    if (quote.vatRegistered === 'VAT Registered' && quote.trnNumber) {
+      doc.fillColor('#475569').fontSize(9).font('Helvetica').text(`TRN: ${quote.trnNumber}`, MARGIN, doc.y + 2);
+    }
 
     doc.fillColor('#94a3b8').fontSize(9).font('Helvetica-Bold').text('QUOTE DATE', MARGIN, billToY, { align: 'right', width: CONTENT_WIDTH });
     doc.fillColor('#0f172a').fontSize(10).font('Helvetica').text(quote.issueDate ? fmtDate(quote.issueDate) : '—', { align: 'right', width: CONTENT_WIDTH });
@@ -144,7 +133,9 @@ export function generateQuotationPdfBuffer(quote: QuotationPdfData, company: Com
     doc.moveDown(0.3);
     totalsRow('Total (AED)', currency(totals.total), true);
 
-    doc.moveDown(3);
+    drawTermsAndConditions(doc, MARGIN, CONTENT_WIDTH);
+
+    doc.moveDown(1.5);
     doc.fillColor('#94a3b8').fontSize(9).font('Helvetica').text('We thank you for dealing with us and are looking forward to your decision.', MARGIN, doc.y, { width: CONTENT_WIDTH });
 
     doc.end();
