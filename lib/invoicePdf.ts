@@ -1,7 +1,7 @@
 import PDFDocument from 'pdfkit';
 import { currency, fmtDate } from '@/lib/utils';
 import { computeInvoiceTotals, InvoiceItem, lineAmounts } from '@/lib/invoice-calc';
-import { drawLetterhead, drawTermsAndConditions } from '@/lib/pdfBranding';
+import { drawLetterhead, drawTermsAndConditions, drawStamp, drawBankDetails, BankDetails, BRAND_ACCENT } from '@/lib/pdfBranding';
 
 type InvoicePdfData = {
   invoiceNumber: string;
@@ -13,12 +13,13 @@ type InvoicePdfData = {
   items: InvoiceItem[];
   vatRegistered?: string;
   trnNumber?: string;
+  bankDetails?: BankDetails;
 };
 
 const MARGIN = 50;
 const PAGE_WIDTH = 595.28;
 const CONTENT_WIDTH = PAGE_WIDTH - MARGIN * 2;
-const ACCENT = '#c2410c';
+const ACCENT = BRAND_ACCENT;
 
 const COLS = {
   idx: { x: MARGIN, w: 20 },
@@ -133,10 +134,13 @@ export function generateInvoicePdfBuffer(invoice: InvoicePdfData): Promise<Buffe
     doc.moveDown(0.3);
     totalsRow('Total (AED)', currency(totals.total), true);
 
+    drawBankDetails(doc, MARGIN, CONTENT_WIDTH, invoice.bankDetails);
     drawTermsAndConditions(doc, MARGIN, CONTENT_WIDTH);
 
     doc.moveDown(1.5);
     doc.fillColor('#94a3b8').fontSize(9).font('Helvetica').text('Thank you for your business.', MARGIN, doc.y, { width: CONTENT_WIDTH });
+
+    drawStamp(doc, MARGIN, CONTENT_WIDTH);
 
     doc.end();
   });

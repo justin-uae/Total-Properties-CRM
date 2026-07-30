@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import { prisma } from '@/lib/db';
 import { getStripeConfig } from '@/lib/stripe';
+import { isStripePayable } from '@/lib/invoice-calc';
 
 export async function POST(_: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -10,6 +11,7 @@ export async function POST(_: Request, { params }: { params: Promise<{ id: strin
   const { enabled, secretKey } = getStripeConfig();
   if (!enabled) return NextResponse.json({ message: 'Stripe is not enabled' }, { status: 400 });
   const data = invoice.data as any;
+  if (!isStripePayable(data)) return NextResponse.json({ message: 'This invoice is not payable online.' }, { status: 400 });
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
   const stripe = new Stripe(secretKey, { apiVersion: '2024-06-20' as any });
   const session = await stripe.checkout.sessions.create({

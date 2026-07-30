@@ -32,7 +32,9 @@ export async function POST(req: NextRequest) {
     issue: details,
     ticketNumber: await generateTicketNumber(),
     reportedAt: new Date().toISOString(),
-    resolution: [] as { id: string; name: string; mimeType: string }[]
+    resolution: [] as { id: string; name: string; mimeType: string }[],
+    submittedByTenant: true,
+    comments: [] as { id: string; authorName: string; authorRole: string; message: string; createdAt: string }[]
   };
 
   const record = await prisma.record.create({

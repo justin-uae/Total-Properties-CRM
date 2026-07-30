@@ -20,6 +20,8 @@ type InvoiceFormValues = {
   items: InvoiceItem[];
   vatRegistered: string;
   trnNumber: string;
+  sourceType: string;
+  bookingType: string;
 };
 
 function todayIso() {
@@ -50,19 +52,40 @@ function fromBookingValues(booking: RecordRow): InvoiceFormValues {
       taxPct: 0
     }],
     vatRegistered: '',
-    trnNumber: ''
+    trnNumber: '',
+    sourceType: 'meeting-room-booking',
+    bookingType: d.bookingType || 'Public'
+  };
+}
+
+function fromQuoteValues(quote: RecordRow): InvoiceFormValues {
+  const d = quote.data;
+  return {
+    invoiceNumber: `INV-${Date.now()}`,
+    clientName: d.clientName || '',
+    email: d.email || '',
+    issueDate: todayIso(),
+    dueDate: daysFromNowIso(7),
+    subject: d.subject || '',
+    items: d.items?.length ? d.items : [emptyInvoiceItem()],
+    vatRegistered: d.vatRegistered || '',
+    trnNumber: d.trnNumber || '',
+    sourceType: '',
+    bookingType: ''
   };
 }
 
 export function InvoiceForm({
   existing,
   fromBooking,
+  fromQuote,
   modal,
   onClose,
   onSaved
 }: {
   existing: RecordRow | null;
   fromBooking?: RecordRow | null;
+  fromQuote?: RecordRow | null;
   modal?: boolean;
   onClose: () => void;
   onSaved: () => void;
@@ -80,10 +103,13 @@ export function InvoiceForm({
         subject: existing.data.subject || '',
         items: existing.data.items?.length ? existing.data.items : [emptyInvoiceItem()],
         vatRegistered: existing.data.vatRegistered || '',
-        trnNumber: existing.data.trnNumber || ''
+        trnNumber: existing.data.trnNumber || '',
+        sourceType: existing.data.sourceType || '',
+        bookingType: existing.data.bookingType || ''
       };
     }
     if (fromBooking) return fromBookingValues(fromBooking);
+    if (fromQuote) return fromQuoteValues(fromQuote);
     return {
       invoiceNumber: `INV-${Date.now()}`,
       clientName: '',
@@ -93,7 +119,9 @@ export function InvoiceForm({
       subject: '',
       items: [emptyInvoiceItem()],
       vatRegistered: '',
-      trnNumber: ''
+      trnNumber: '',
+      sourceType: '',
+      bookingType: ''
     };
   });
   const [mode, setMode] = useState<'form' | 'preview'>('form');
@@ -151,7 +179,9 @@ export function InvoiceForm({
       amount: totals.total,
       description: values.subject,
       vatRegistered: values.vatRegistered,
-      trnNumber: values.vatRegistered === 'VAT Registered' ? values.trnNumber : ''
+      trnNumber: values.vatRegistered === 'VAT Registered' ? values.trnNumber : '',
+      sourceType: values.sourceType,
+      bookingType: values.bookingType
     };
   }
 
@@ -171,6 +201,15 @@ export function InvoiceForm({
     });
   }
 
+  async function linkQuote(invoiceId: string) {
+    if (!fromQuote || fromQuote.data.invoiceId === invoiceId) return;
+    await fetch(`/api/records/${fromQuote.id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: fromQuote.status, data: { ...fromQuote.data, invoiceId } })
+    });
+  }
+
   async function persist(status: 'Draft' | 'Sent'): Promise<string | null> {
     const data = buildData();
     if (recordId) {
@@ -182,6 +221,7 @@ export function InvoiceForm({
       const json = await res.json();
       if (!res.ok) { setError(json.message || 'Could not save invoice'); return null; }
       await linkBooking(recordId);
+      await linkQuote(recordId);
       return recordId;
     }
     const res = await fetch('/api/records', {
@@ -193,6 +233,7 @@ export function InvoiceForm({
     if (!res.ok) { setError(json.message || 'Could not save invoice'); return null; }
     setRecordId(json.record.id);
     await linkBooking(json.record.id);
+    await linkQuote(json.record.id);
     return json.record.id;
   }
 

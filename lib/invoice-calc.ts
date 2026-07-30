@@ -18,6 +18,11 @@ export function lineAmounts(item: InvoiceItem) {
   return { base, discount, taxable, tax, amount: taxable + tax };
 }
 
+/** Stripe is only offered on invoices generated from a Public meeting-room booking — Tenant bookings are free, and all other invoice types are settled by bank transfer. */
+export function isStripePayable(data: { sourceType?: string; bookingType?: string }) {
+  return data?.sourceType === 'meeting-room-booking' && data?.bookingType !== 'Tenant';
+}
+
 export function computeInvoiceTotals(items: InvoiceItem[]) {
   let subTotal = 0;
   let discountTotal = 0;

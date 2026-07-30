@@ -5,9 +5,28 @@ const LOGO_ASPECT = 206 / 327;
 const LOGO_WIDTH = 110;
 const LOGO_HEIGHT = LOGO_WIDTH * LOGO_ASPECT;
 
+export const STAMP_PATH = path.join(process.cwd(), 'public', 'images', 'stamp.png');
+const STAMP_WIDTH = 90;
+
+/** Brand accent used across quotation/invoice PDFs and transactional emails. */
+export const BRAND_ACCENT = '#EF4F32';
+
+export type BankDetails = {
+  bankName?: string;
+  accountName?: string;
+  accountNumber?: string;
+  iban?: string;
+  swiftCode?: string;
+  branch?: string;
+};
+
 export const COMPANY_NAME_LINE = 'Total Property Solutions Real Estate LLC - OPC';
-export const COMPANY_ADDRESS_LINE =
-  'Khalidiyah Towers, Mezzanine Floor, Al Faskar Street, Al Bateen, Al Khalidiyah, Abu Dhabi, Al Danah - Zone 1, P.O. Box 767649, Abu Dhabi, United Arab Emirates';
+/** Split into deliberate lines (rather than one long string PDFKit auto-wraps at arbitrary word breaks) so the letterhead address reads cleanly. */
+export const COMPANY_ADDRESS_LINES = [
+  'Khalidiyah Towers, Mezzanine Floor, Al Faskar Street',
+  'Al Bateen, Al Khalidiyah, Al Danah - Zone 1',
+  'Abu Dhabi, P.O. Box 767649, United Arab Emirates'
+];
 export const COMPANY_CONTACT_LINE = 'TRN: 100593093600003  •  Tel: +971 26 3444 05  •  karen@totalproperty.ae';
 
 export const TERMS_AND_CONDITIONS = [
@@ -33,10 +52,55 @@ export function drawLetterhead(doc: PDFKit.PDFDocument, MARGIN: number, CONTENT_
 
   let y = topY + LOGO_HEIGHT + 10;
   doc.fillColor('#0f172a').fontSize(9.5).font('Helvetica-Bold').text(COMPANY_NAME_LINE, MARGIN, y, { width: CONTENT_WIDTH });
-  doc.fillColor('#475569').fontSize(8).font('Helvetica').text(COMPANY_ADDRESS_LINE, MARGIN, doc.y + 2, { width: CONTENT_WIDTH });
-  doc.fillColor('#475569').fontSize(8).font('Helvetica').text(COMPANY_CONTACT_LINE, MARGIN, doc.y + 2, { width: CONTENT_WIDTH });
+  doc.fillColor('#475569').fontSize(8).font('Helvetica');
+  COMPANY_ADDRESS_LINES.forEach((line) => {
+    doc.text(line, MARGIN, doc.y + 2, { width: CONTENT_WIDTH, lineGap: 0 });
+  });
+  doc.fillColor('#475569').fontSize(8).font('Helvetica').text(COMPANY_CONTACT_LINE, MARGIN, doc.y + 3, { width: CONTENT_WIDTH });
 
   return doc.y;
+}
+
+/** Draws the company stamp image absolutely positioned at the bottom-right of the current (last) page. */
+export function drawStamp(doc: PDFKit.PDFDocument, MARGIN: number, CONTENT_WIDTH: number) {
+  try {
+    const x = MARGIN + CONTENT_WIDTH - STAMP_WIDTH;
+    const y = doc.page.height - MARGIN - STAMP_WIDTH;
+    doc.image(STAMP_PATH, x, y, { width: STAMP_WIDTH });
+  } catch {
+    // Stamp file missing on disk — continue without it rather than failing the whole document.
+  }
+}
+
+/** Draws a boxed "Bank Details" section for wire transfer payments, if any bank field is set. */
+export function drawBankDetails(doc: PDFKit.PDFDocument, MARGIN: number, CONTENT_WIDTH: number, bankDetails?: BankDetails) {
+  if (!bankDetails) return;
+  const rows = ([
+    ['Bank Name', bankDetails.bankName || ''],
+    ['Account Name', bankDetails.accountName || ''],
+    ['Account Number', bankDetails.accountNumber || ''],
+    ['IBAN', bankDetails.iban || ''],
+    ['SWIFT / BIC', bankDetails.swiftCode || ''],
+    ['Branch', bankDetails.branch || '']
+  ] as [string, string][]).filter(([, value]) => value);
+  if (rows.length === 0) return;
+
+  const rowHeight = 14;
+  const boxHeight = 22 + rows.length * rowHeight;
+  if (doc.y + boxHeight > doc.page.height - MARGIN - 100) {
+    doc.addPage();
+    doc.y = MARGIN;
+  }
+
+  doc.moveDown(1);
+  doc.fillColor('#0f172a').fontSize(9).font('Helvetica-Bold').text('Bank Details for Payment', MARGIN, doc.y, { width: CONTENT_WIDTH });
+  doc.moveDown(0.4);
+  rows.forEach(([label, value]) => {
+    const y = doc.y;
+    doc.fillColor('#64748b').fontSize(8.5).font('Helvetica-Bold').text(label, MARGIN + 4, y, { width: 110 });
+    doc.fillColor('#334155').fontSize(8.5).font('Helvetica').text(value, MARGIN + 120, y, { width: CONTENT_WIDTH - 124 });
+    doc.y = y + rowHeight;
+  });
 }
 
 /** Draws the numbered Terms & Conditions block, starting a new page first if there isn't enough room left. */

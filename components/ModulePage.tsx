@@ -1,11 +1,13 @@
 'use client';
 
 import { ModuleConfig, moduleMap } from '@/lib/modules';
-import { currency, fmtDate } from '@/lib/utils';
+import { currency, fmtDate, toDatetimeLocal, fromDatetimeLocal } from '@/lib/utils';
 import { Spinner } from '@/components/ui/Spinner';
 import { Combobox } from '@/components/ui/Combobox';
+import { ImageLightbox } from '@/components/ui/ImageLightbox';
 import { InvoiceForm } from '@/components/InvoiceForm';
 import { QuotationForm } from '@/components/QuotationForm';
+import { MaintenanceDetail } from '@/components/MaintenanceDetail';
 import { Download, Eye, EyeOff, FileText, Plus, RefreshCw, Send, Trash2, Upload } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 
@@ -83,6 +85,7 @@ export function ModulePage({ slug }: { slug: string }) {
   const [confirmTransferRow, setConfirmTransferRow] = useState<RecordRow | null>(null);
   const [transferError, setTransferError] = useState('');
   const [invoiceFromBookingRow, setInvoiceFromBookingRow] = useState<RecordRow | null>(null);
+  const [invoiceFromQuoteRow, setInvoiceFromQuoteRow] = useState<RecordRow | null>(null);
   const [sendingEmail, setSendingEmail] = useState<Record<string, boolean>>({});
   const [emailSendError, setEmailSendError] = useState<Record<string, string>>({});
   const [showForm, setShowForm] = useState(false);
@@ -91,6 +94,7 @@ export function ModulePage({ slug }: { slug: string }) {
   const [form, setForm] = useState<Record<string, any>>({ status: module.defaultStatus || module.statuses[0] || 'New' });
   const [dynamicRecords, setDynamicRecords] = useState<Record<string, RecordRow[]>>({});
   const [showPassword, setShowPassword] = useState<Record<string, boolean>>({});
+  const [lightbox, setLightbox] = useState<{ src: string; alt: string } | null>(null);
 
   async function load() {
     setLoading(true);
@@ -145,7 +149,9 @@ export function ModulePage({ slug }: { slug: string }) {
 
   function startCreate() {
     setEditing(null);
-    setForm({ status: module.defaultStatus || module.statuses[0] || 'New' });
+    const defaults: Record<string, any> = { status: module.defaultStatus || module.statuses[0] || 'New' };
+    for (const f of module.fields) if (f.type === 'datetime') defaults[f.name] = new Date().toISOString();
+    setForm(defaults);
     setShowForm(true);
   }
 
@@ -333,7 +339,11 @@ export function ModulePage({ slug }: { slug: string }) {
         <QuotationForm existing={editing} onClose={() => setShowForm(false)} onSaved={load} />
       )}
 
-      {showForm && module.slug !== 'invoices' && module.slug !== 'quotations' && (
+      {showForm && module.slug === 'maintenance' && editing && (
+        <MaintenanceDetail ticket={editing} mode="admin" onClose={() => setShowForm(false)} onSaved={() => { setShowForm(false); load(); }} />
+      )}
+
+      {showForm && module.slug !== 'invoices' && module.slug !== 'quotations' && !(module.slug === 'maintenance' && editing) && (
         <div className="card p-6">
           <div className="mb-5 flex items-center justify-between">
             <h2 className="text-xl font-bold">{editing ? 'Edit' : 'Add'} {module.singular}</h2>
@@ -387,7 +397,11 @@ export function ModulePage({ slug }: { slug: string }) {
                     const isPdf = ref?.mimeType === 'application/pdf';
                     if (ref) return (
                       <div className="overflow-hidden rounded-xl border border-slate-200 bg-slate-50">
-                        {isImg && <img src={`/api/files/${ref.id}`} alt={ref.name} className="max-h-52 w-full object-contain p-2" />}
+                        {isImg && (
+                          <button type="button" onClick={() => setLightbox({ src: `/api/files/${ref.id}`, alt: ref.name })} className="block w-full">
+                            <img src={`/api/files/${ref.id}`} alt={ref.name} className="max-h-52 w-full object-contain p-2" />
+                          </button>
+                        )}
                         {isPdf && <iframe src={`/api/files/${ref.id}`} title={ref.name} className="h-52 w-full border-0" />}
                         <div className="flex items-center gap-2 border-t border-slate-200 bg-white px-3 py-2">
                           <FileText className="h-4 w-4 shrink-0 text-slate-400" />
@@ -427,7 +441,11 @@ export function ModulePage({ slug }: { slug: string }) {
                               const isImg = ref.mimeType?.startsWith('image/');
                               return (
                                 <div key={ref.id} className="overflow-hidden rounded-xl border border-slate-200 bg-slate-50">
-                                  {isImg ? <img src={`/api/files/${ref.id}`} alt={ref.name} className="h-24 w-full object-cover" /> : (
+                                  {isImg ? (
+                                    <button type="button" onClick={() => setLightbox({ src: `/api/files/${ref.id}`, alt: ref.name })} className="block h-24 w-full">
+                                      <img src={`/api/files/${ref.id}`} alt={ref.name} className="h-24 w-full object-cover" />
+                                    </button>
+                                  ) : (
                                     <a href={`/api/files/${ref.id}?download=true`} className="flex h-24 items-center justify-center"><FileText className="h-8 w-8 text-slate-400" /></a>
                                   )}
                                   <div className="flex items-center gap-1 border-t border-slate-200 bg-white px-2 py-1.5">
@@ -465,6 +483,8 @@ export function ModulePage({ slug }: { slug: string }) {
                       {showPassword[field.name] ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                     </button>
                   </div>
+                ) : field.type === 'datetime' ? (
+                  <input className="input" disabled={saving} type="datetime-local" value={toDatetimeLocal(form[field.name])} onChange={(e) => setForm({ ...form, [field.name]: fromDatetimeLocal(e.target.value) })} required={field.required} />
                 ) : (
                   <input className="input" disabled={saving} type={field.type === 'money' ? 'number' : field.type} step={field.type === 'money' ? '0.01' : undefined} value={form[field.name] || ''} onChange={(e) => setForm({ ...form, [field.name]: e.target.value })} required={field.required} placeholder={field.placeholder} />
                 )}
@@ -570,6 +590,32 @@ export function ModulePage({ slug }: { slug: string }) {
                         {emailSendError[row.id] && <span className="mt-0.5 text-[11px] font-medium text-red-600">{emailSendError[row.id]}</span>}
                       </span>
                     )}
+                    {module.slug === 'quotations' && row.status === 'Accepted' && (
+                      row.data.invoiceId ? (
+                        <span className="mr-2 inline-flex flex-col items-end">
+                          <button
+                            onClick={() => sendInvoiceEmailFor(row.data.invoiceId, row.id)}
+                            disabled={sendingEmail[row.id]}
+                            title="Resend Invoice Email"
+                            className="rounded-lg px-2 py-1 text-xs font-semibold text-blue-600 hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-40"
+                          >
+                            <FileText className="inline h-3.5 w-3.5 mr-1" />
+                            {sendingEmail[row.id] ? 'Sending…' : 'Resend Invoice'}
+                          </button>
+                        </span>
+                      ) : !row.data.email ? (
+                        <span className="mr-2 rounded-lg px-2 py-1 text-xs font-semibold text-slate-400" title="This quotation has no email on file">No Email</span>
+                      ) : (
+                        <button
+                          onClick={() => setInvoiceFromQuoteRow(row)}
+                          title="Create Invoice"
+                          className="mr-2 rounded-lg px-2 py-1 text-xs font-semibold text-blue-600 hover:bg-blue-50"
+                        >
+                          <FileText className="inline h-3.5 w-3.5 mr-1" />
+                          Create Invoice
+                        </button>
+                      )
+                    )}
                     {module.slug === 'clients' && row.data.telephone && (
                       <a
                         href={`https://wa.me/${String(row.data.telephone).replace(/[^0-9]/g, '')}`}
@@ -641,6 +687,18 @@ export function ModulePage({ slug }: { slug: string }) {
           onSaved={load}
         />
       )}
+
+      {invoiceFromQuoteRow && (
+        <InvoiceForm
+          existing={null}
+          fromQuote={invoiceFromQuoteRow}
+          modal
+          onClose={() => setInvoiceFromQuoteRow(null)}
+          onSaved={load}
+        />
+      )}
+
+      {lightbox && <ImageLightbox src={lightbox.src} alt={lightbox.alt} onClose={() => setLightbox(null)} />}
     </div>
   );
 }

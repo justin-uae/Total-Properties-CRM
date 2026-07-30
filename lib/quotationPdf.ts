@@ -1,7 +1,7 @@
 import PDFDocument from 'pdfkit';
 import { currency, fmtDate } from '@/lib/utils';
 import { computeInvoiceTotals, InvoiceItem, lineAmounts } from '@/lib/invoice-calc';
-import { drawLetterhead, drawTermsAndConditions } from '@/lib/pdfBranding';
+import { drawLetterhead, drawTermsAndConditions, drawStamp, BRAND_ACCENT } from '@/lib/pdfBranding';
 
 type QuotationPdfData = {
   quoteNumber: string;
@@ -18,7 +18,7 @@ type QuotationPdfData = {
 const MARGIN = 50;
 const PAGE_WIDTH = 595.28;
 const CONTENT_WIDTH = PAGE_WIDTH - MARGIN * 2;
-const ACCENT = '#c2410c';
+const ACCENT = BRAND_ACCENT;
 
 const COLS = {
   idx: { x: MARGIN, w: 20 },
@@ -137,6 +137,8 @@ export function generateQuotationPdfBuffer(quote: QuotationPdfData): Promise<Buf
 
     doc.moveDown(1.5);
     doc.fillColor('#94a3b8').fontSize(9).font('Helvetica').text('We thank you for dealing with us and are looking forward to your decision.', MARGIN, doc.y, { width: CONTENT_WIDTH });
+
+    drawStamp(doc, MARGIN, CONTENT_WIDTH);
 
     doc.end();
   });

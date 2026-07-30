@@ -1,13 +1,19 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { Plus, Trash2, X } from 'lucide-react';
+import { FileText, Plus, Trash2, Upload, X } from 'lucide-react';
 import { Combobox } from '@/components/ui/Combobox';
 import { Spinner } from '@/components/ui/Spinner';
 import { currency } from '@/lib/utils';
 import { computeInvoiceTotals, emptyInvoiceItem, InvoiceItem, lineAmounts } from '@/lib/invoice-calc';
 
 type RecordRow = { id: string; title: string; status: string; data: Record<string, any> };
+
+type FileRef = { id: string; name: string; mimeType: string };
+
+function isFileRef(v: unknown): v is FileRef {
+  return typeof v === 'object' && v !== null && 'id' in v && 'name' in v;
+}
 
 type QuotationFormValues = {
   quoteNumber: string;
@@ -45,10 +51,37 @@ export function QuotationForm({ existing, onClose, onSaved }: { existing: Record
     vatRegistered: existing?.data.vatRegistered || '',
     trnNumber: existing?.data.trnNumber || ''
   }));
+  const [attachment, setAttachment] = useState<FileRef | null>(isFileRef(existing?.data.attachment) ? existing!.data.attachment : null);
+  const [uploadingAttachment, setUploadingAttachment] = useState(false);
   const [mode, setMode] = useState<'form' | 'preview'>('form');
   const [saving, setSaving] = useState(false);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState('');
+
+  async function handleAttachmentUpload(file: File) {
+    setUploadingAttachment(true);
+    try {
+      const fd = new FormData();
+      fd.append('file', file);
+      fd.append('module', 'quotations');
+      if (recordId) fd.append('recordId', recordId);
+      const res = await fetch('/api/files/upload', { method: 'POST', body: fd });
+      let json: any = {};
+      try { json = await res.json(); } catch { /* non-JSON body */ }
+      if (!res.ok) { setError(json.message || `Upload failed (${res.status})`); return; }
+      setAttachment({ id: json.file.id, name: json.file.originalName, mimeType: json.file.mimeType });
+    } catch (err: any) {
+      setError(err?.message || 'Upload failed');
+    } finally {
+      setUploadingAttachment(false);
+    }
+  }
+
+  async function handleAttachmentRemove() {
+    if (!attachment) return;
+    await fetch(`/api/files/${attachment.id}`, { method: 'DELETE' });
+    setAttachment(null);
+  }
 
   useEffect(() => {
     fetch('/api/records?module=clients').then((r) => r.json()).then((json) => setClients(json.records || [])).catch(() => {});
@@ -100,7 +133,8 @@ export function QuotationForm({ existing, onClose, onSaved }: { existing: Record
       amount: totals.total,
       description: values.subject,
       vatRegistered: values.vatRegistered,
-      trnNumber: values.vatRegistered === 'VAT Registered' ? values.trnNumber : ''
+      trnNumber: values.vatRegistered === 'VAT Registered' ? values.trnNumber : '',
+      attachment
     };
   }
 
@@ -131,6 +165,13 @@ export function QuotationForm({ existing, onClose, onSaved }: { existing: Record
     const json = await res.json();
     if (!res.ok) { setError(json.message || 'Could not save quotation'); return null; }
     setRecordId(json.record.id);
+    if (attachment) {
+      await fetch(`/api/files/${attachment.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ recordId: json.record.id })
+      });
+    }
     return json.record.id;
   }
 
@@ -303,6 +344,30 @@ export function QuotationForm({ existing, onClose, onSaved }: { existing: Record
         ))}
         {values.vatRegistered === 'VAT Registered' &&
           field('Customer TRN (15-digit)', <input className="input" placeholder="Enter your customer's 15-digit TRN" value={values.trnNumber} onChange={(e) => setValues((v) => ({ ...v, trnNumber: e.target.value }))} />)}
+      </div>
+
+      <div className="mt-6">
+        <p className="label mb-2">Attachment (optional)</p>
+        {attachment ? (
+          <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5">
+            <FileText className="h-4 w-4 shrink-0 text-slate-400" />
+            <span className="min-w-0 flex-1 truncate text-sm font-medium text-slate-700">{attachment.name}</span>
+            <a href={`/api/files/${attachment.id}?download=true`} className="btn-secondary px-2 py-1 text-xs">Download</a>
+            <button type="button" onClick={handleAttachmentRemove} className="text-xs font-medium text-red-500 hover:text-red-700">Remove</button>
+          </div>
+        ) : uploadingAttachment ? (
+          <div className="flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 p-4">
+            <Spinner size="sm" color="muted" />
+            <span className="text-sm text-slate-500">Uploading…</span>
+          </div>
+        ) : (
+          <label className="flex cursor-pointer items-center gap-3 rounded-xl border-2 border-dashed border-slate-200 bg-slate-50 p-4 text-center transition hover:border-[rgb(var(--accent))]">
+            <Upload className="h-5 w-5 shrink-0 text-slate-400" />
+            <span className="text-sm text-slate-600">Click to attach a file (PDF, JPG, PNG, WebP — max 10 MB) — will be emailed with the quotation</span>
+            <input type="file" className="sr-only" accept=".pdf,.jpg,.jpeg,.png,.webp,.gif"
+              onChange={(e) => { const f = e.target.files?.[0]; if (f) handleAttachmentUpload(f); }} />
+          </label>
+        )}
       </div>
 
       <div className="mt-6">

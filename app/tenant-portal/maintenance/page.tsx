@@ -1,9 +1,10 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
 import { fmtDate } from '@/lib/utils';
 import { Spinner } from '@/components/ui/Spinner';
-import { Plus, Upload, FileText, X } from 'lucide-react';
+import { Eye, Plus, Upload, FileText, Image as ImageIcon, X } from 'lucide-react';
 
 type RecordRow = { id: string; title: string; status: string; data: Record<string, any>; createdAt: string };
 
@@ -127,20 +128,33 @@ export default function TenantMaintenancePage() {
                 <th className="px-5 py-3 whitespace-nowrap">Details</th>
                 <th className="px-5 py-3 whitespace-nowrap">Reported At</th>
                 <th className="px-5 py-3 whitespace-nowrap">Status</th>
+                <th className="px-5 py-3 whitespace-nowrap">Photos</th>
+                <th className="px-5 py-3 whitespace-nowrap text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {loading ? (
-                <tr><td className="px-5 py-8 text-slate-500" colSpan={5}><Spinner size="sm" color="muted" /></td></tr>
+                <tr><td className="px-5 py-8 text-slate-500" colSpan={7}><Spinner size="sm" color="muted" /></td></tr>
               ) : rows.length === 0 ? (
-                <tr><td className="px-5 py-8 text-slate-500" colSpan={5}>No maintenance tickets yet.</td></tr>
+                <tr><td className="px-5 py-8 text-slate-500" colSpan={7}>No maintenance tickets yet.</td></tr>
               ) : rows.map((row) => (
-                <tr key={row.id}>
+                <tr key={row.id} className="hover:bg-slate-50/70">
                   <td className="px-5 py-4 whitespace-nowrap font-semibold">{row.data.ticketNumber}</td>
                   <td className="px-5 py-4 whitespace-nowrap">{row.data.category}</td>
                   <td className="px-5 py-4 max-w-xs truncate">{row.data.issue}</td>
                   <td className="px-5 py-4 whitespace-nowrap">{fmtDate(row.data.reportedAt)}</td>
                   <td className="px-5 py-4 whitespace-nowrap"><span className="status-pill bg-orange-50 text-orange-700">{row.status}</span></td>
+                  <td className="px-5 py-4 whitespace-nowrap">
+                    <span className="inline-flex items-center gap-1 text-xs font-medium text-slate-500">
+                      <ImageIcon className="h-3.5 w-3.5" />
+                      {Array.isArray(row.data.resolution) ? row.data.resolution.length : 0}
+                    </span>
+                  </td>
+                  <td className="px-5 py-4 whitespace-nowrap text-right">
+                    <Link href={`/tenant-portal/maintenance/${row.id}`} title="View Detail" className="inline-flex rounded-lg p-2 text-slate-500 hover:bg-slate-100 hover:text-blue-600">
+                      <Eye className="h-4 w-4" />
+                    </Link>
+                  </td>
                 </tr>
               ))}
             </tbody>

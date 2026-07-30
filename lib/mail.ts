@@ -4,6 +4,26 @@ import { getSettings } from '@/lib/settings';
 import { generateInvoicePdfBuffer } from '@/lib/invoicePdf';
 import { generateQuotationPdfBuffer } from '@/lib/quotationPdf';
 import { createInvoicePaymentLink } from '@/lib/stripePaymentLink';
+import { isStripePayable } from '@/lib/invoice-calc';
+import { renderTemplate } from '@/lib/emailTemplates';
+import { BRAND_ACCENT } from '@/lib/pdfBranding';
+import { currency, fmtDate } from '@/lib/utils';
+import { downloadFile } from '@/lib/storage';
+
+function bankDetailsHtml(bankDetails: Record<string, string> | undefined) {
+  if (!bankDetails) return '';
+  const rows = ([
+    ['Bank Name', bankDetails.bankName],
+    ['Account Name', bankDetails.accountName],
+    ['Account Number', bankDetails.accountNumber],
+    ['IBAN', bankDetails.iban],
+    ['SWIFT / BIC', bankDetails.swiftCode],
+    ['Branch', bankDetails.branch]
+  ] as [string, string][]).filter(([, value]) => value);
+  if (rows.length === 0) return '';
+  const rowsHtml = rows.map(([label, value]) => `<tr><td style="padding:2px 12px 2px 0;color:#64748b;font-weight:600">${label}</td><td style="padding:2px 0;color:#334155">${value}</td></tr>`).join('');
+  return `<div style="margin-top:20px;padding:14px 16px;border:1px solid #e2e8f0;border-radius:10px"><p style="margin:0 0 8px;font-weight:700;color:#0f172a">Bank Details for Payment</p><table style="font-size:13px">${rowsHtml}</table></div>`;
+}
 
 export async function sendInvoiceEmail(invoiceId: string) {
   const invoice = await prisma.record.findUnique({ where: { id: invoiceId } });
@@ -16,10 +36,11 @@ export async function sendInvoiceEmail(invoiceId: string) {
   const companyName = String(settings.companyName || 'Our Company');
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
   const link = `${appUrl}/public/invoice/${invoice.publicToken}`;
+  const bankDetails = settings.bankDetails as Record<string, string> | undefined;
 
   let paymentLinkUrl: string | undefined = data.stripePaymentLinkUrl;
   let paymentLinkId: string | undefined = data.stripePaymentLinkId;
-  if (!paymentLinkUrl && invoice.status !== 'Paid') {
+  if (!paymentLinkUrl && invoice.status !== 'Paid' && isStripePayable(data)) {
     const created = await createInvoicePaymentLink({
       invoiceId: invoice.id,
       invoiceNumber: data.invoiceNumber || invoice.id,
@@ -50,20 +71,32 @@ export async function sendInvoiceEmail(invoiceId: string) {
       subject: data.subject,
       items: data.items,
       vatRegistered: data.vatRegistered,
-      trnNumber: data.trnNumber
+      trnNumber: data.trnNumber,
+      bankDetails
     });
     attachments.push({ filename: `Invoice-${data.invoiceNumber || invoice.id}.pdf`, content: pdfBuffer });
   }
 
-  const payLine = paymentLinkUrl ? `\nPay online securely here:\n${paymentLinkUrl}\n` : '';
-  const payHtml = paymentLinkUrl ? `<p><a href="${paymentLinkUrl}" style="display:inline-block;padding:10px 18px;background:#c2410c;color:#fff;border-radius:8px;text-decoration:none;font-weight:600">Pay Now</a></p>` : '';
+  const tokens = {
+    clientName: data.clientName || 'Customer',
+    companyName,
+    invoiceNumber: data.invoiceNumber || '',
+    link,
+    amount: currency(data.total ?? data.amount ?? 0),
+    dueDate: data.dueDate ? fmtDate(data.dueDate) : ''
+  };
+  const template = (settings.emailTemplates as any)?.invoice || {};
+  const subject = renderTemplate(String(template.subject || `Invoice {{invoiceNumber}} from {{companyName}}`), tokens);
+  const bodyHtml = renderTemplate(String(template.bodyHtml || ''), tokens);
+
+  const payHtml = paymentLinkUrl ? `<p><a href="${paymentLinkUrl}" style="display:inline-block;padding:10px 18px;background:${BRAND_ACCENT};color:#fff;border-radius:8px;text-decoration:none;font-weight:600">Pay Now</a></p>` : '';
+  const html = `${bodyHtml}${payHtml}${bankDetailsHtml(bankDetails)}`;
 
   await transporter.sendMail({
     from: process.env.SMTP_FROM || `${companyName} <noreply@example.com>`,
     to: data.email,
-    subject: `Invoice ${data.invoiceNumber || ''} from ${companyName}`,
-    text: `Dear ${data.clientName || 'Customer'},\n\nPlease find your invoice attached${attachments.length ? '' : ', and available'} using this secure link:\n${link}\n${payLine}\nThank you,\n${companyName}`,
-    html: `<p>Dear ${data.clientName || 'Customer'},</p><p>Please find your invoice attached${attachments.length ? '' : ', and available'} using this secure link:</p><p><a href="${link}">${link}</a></p>${payHtml}<p>Thank you,<br>${companyName}</p>`,
+    subject,
+    html,
     attachments
   });
 
@@ -115,12 +148,31 @@ export async function sendQuotationEmail(quoteId: string) {
     attachments.push({ filename: `Quotation-${data.quoteNumber || quote.id}.pdf`, content: pdfBuffer });
   }
 
+  if (data.attachment?.id) {
+    const file = await prisma.fileObject.findUnique({ where: { id: data.attachment.id } });
+    if (file) {
+      const blob = await downloadFile(file.storedName);
+      attachments.push({ filename: file.originalName, content: Buffer.from(await blob.arrayBuffer()) });
+    }
+  }
+
+  const tokens = {
+    clientName: data.clientName || 'Customer',
+    companyName,
+    quoteNumber: data.quoteNumber || '',
+    link,
+    amount: currency(data.total ?? data.amount ?? 0),
+    validUntil: data.validUntil ? fmtDate(data.validUntil) : ''
+  };
+  const template = (settings.emailTemplates as any)?.quotation || {};
+  const subject = renderTemplate(String(template.subject || `Quotation {{quoteNumber}} from {{companyName}}`), tokens);
+  const bodyHtml = renderTemplate(String(template.bodyHtml || ''), tokens);
+
   await transporter.sendMail({
     from: process.env.SMTP_FROM || `${companyName} <noreply@example.com>`,
     to: data.email,
-    subject: `Quotation ${data.quoteNumber || ''} from ${companyName}`,
-    text: `Dear ${data.clientName || 'Customer'},\n\nPlease find your quotation attached${attachments.length ? '' : ', and available'} using this secure link:\n${link}\n\nThank you,\n${companyName}`,
-    html: `<p>Dear ${data.clientName || 'Customer'},</p><p>Please find your quotation attached${attachments.length ? '' : ', and available'} using this secure link:</p><p><a href="${link}">${link}</a></p><p>Thank you,<br>${companyName}</p>`,
+    subject,
+    html: bodyHtml,
     attachments
   });
 

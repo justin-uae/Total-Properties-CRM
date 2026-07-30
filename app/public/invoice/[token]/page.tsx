@@ -2,7 +2,10 @@ import { prisma } from '@/lib/db';
 import { currency } from '@/lib/utils';
 import { notFound } from 'next/navigation';
 import { PrintButton } from '@/components/PrintButton';
+import { BankDetailsCard } from '@/components/BankDetailsCard';
 import { getStripeConfig } from '@/lib/stripe';
+import { isStripePayable } from '@/lib/invoice-calc';
+import { getSettings } from '@/lib/settings';
 
 export default async function PublicInvoicePage({ params }: { params: Promise<{ token: string }> }) {
   const { token } = await params;
@@ -10,7 +13,17 @@ export default async function PublicInvoicePage({ params }: { params: Promise<{ 
   if (!invoice || invoice.module !== 'invoices') notFound();
   await prisma.record.update({ where: { id: invoice.id }, data: { viewedAt: new Date(), viewCount: { increment: 1 }, status: invoice.status === 'Sent' ? 'Viewed' : invoice.status } });
   const data = invoice.data as any;
-  const stripeEnabled = getStripeConfig().enabled;
+  const settings = await getSettings();
+  const bankDetails = (settings.bankDetails || {}) as Record<string, string>;
+  const bankRows: [string, string][] = [
+    ['Bank Name', bankDetails.bankName],
+    ['Account Name', bankDetails.accountName],
+    ['Account Number', bankDetails.accountNumber],
+    ['IBAN', bankDetails.iban],
+    ['SWIFT / BIC', bankDetails.swiftCode],
+    ['Branch', bankDetails.branch]
+  ].filter(([, value]) => value) as [string, string][];
+  const stripeEnabled = getStripeConfig().enabled && isStripePayable(data);
   return (
     <div className="min-h-screen bg-slate-100 p-6">
       <div className="mx-auto max-w-3xl rounded-3xl bg-white p-8 shadow-soft">
@@ -37,6 +50,7 @@ export default async function PublicInvoicePage({ params }: { params: Promise<{ 
           <p className="font-bold">Description</p>
           <p className="mt-2 whitespace-pre-line text-slate-600">{data.description || 'Business centre services'}</p>
         </div>
+        <BankDetailsCard rows={bankRows} />
         <div className="mt-8 flex flex-wrap justify-end gap-3">
           {stripeEnabled && invoice.status !== 'Paid' && (
             <form action={`/api/invoices/${invoice.id}/checkout`} method="post">

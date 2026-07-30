@@ -82,6 +82,7 @@ export async function POST(req: NextRequest) {
   if (module === 'maintenance') {
     data.ticketNumber = await generateTicketNumber();
     data.reportedAt = new Date().toISOString();
+    data.createdByStaff = true;
   }
 
   const record = await prisma.record.create({

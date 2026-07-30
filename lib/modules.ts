@@ -19,7 +19,8 @@ import {
   RefreshCcw,
   BellRing,
   Map,
-  BriefcaseBusiness
+  BriefcaseBusiness,
+  Settings
 } from 'lucide-react';
 
 export type FieldType = 'text' | 'email' | 'tel' | 'number' | 'money' | 'textarea' | 'select' | 'date' | 'time' | 'datetime' | 'checkbox' | 'checkbox-group' | 'file' | 'file-multi' | 'password';
@@ -418,7 +419,7 @@ export const modules: ModuleConfig[] = [
     tableFields: ['clientName', 'documentType', 'expiryDate', 'status'],
     fields: [
       { name: 'clientName', label: 'Client / Company', type: 'select', optionsSource: 'clients', optionsValueField: 'companyName', required: true },
-      { name: 'documentType', label: 'Document Type', type: 'select', options: ['Trade Licence', 'Passport', 'Emirates ID', 'Contract', 'Tenancy Agreement', 'Payment Receipt', 'Other'] },
+      { name: 'documentType', label: 'Document Type', type: 'select', options: ['Trade Licence', 'Passport', 'Emirates ID', 'Contract', 'Lease Agreement', 'Tenancy Contract', 'Payment Receipt', 'Other'] },
       { name: 'documentNumber', label: 'Document Number', type: 'text' },
       { name: 'expiryDate', label: 'Expiry Date', type: 'date' },
       { name: 'file', label: 'Upload Documents', type: 'file-multi' },
@@ -585,6 +586,18 @@ export const modules: ModuleConfig[] = [
       { name: 'role', label: 'Role', type: 'select', options: ['MASTER_ADMIN', 'RECEPTION', 'TENANT'] },
       { name: 'password', label: 'Temporary Password', type: 'password' }
     ]
+  },
+  {
+    slug: 'settings',
+    title: 'Settings',
+    singular: 'Setting',
+    group: 'Admin',
+    description: 'Email templates and bank details used across quotations and invoices.',
+    icon: Settings,
+    statuses: [],
+    fields: [],
+    tableFields: [],
+    systemOnly: true
   },
 ];
 

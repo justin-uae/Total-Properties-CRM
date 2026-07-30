@@ -33,3 +33,20 @@ export function ipFromHeaders(headers: Headers) {
 export function normalisePhone(phone?: string) {
   return (phone || '').replace(/[^0-9+]/g, '');
 }
+
+/** Converts an ISO datetime string to the local `yyyy-MM-ddTHH:mm` value an <input type="datetime-local"> expects. */
+export function toDatetimeLocal(value?: string | null) {
+  if (!value) return '';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '';
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
+/** Converts an <input type="datetime-local"> value back to an ISO string. */
+export function fromDatetimeLocal(value?: string | null) {
+  if (!value) return '';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toISOString();
+}
