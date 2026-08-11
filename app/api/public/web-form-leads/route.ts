@@ -32,14 +32,14 @@ function siteLabelForOrigin(origin: string) {
 }
 
 // The three sites use different wording for the office-type dropdown ("Private office space",
-// "Coworking desk", ...) — map free text to the CRM's fixed serviceTypes options where possible,
-// but fall back to the raw text rather than discarding it if nothing matches.
+// "Coworking desk", "Serviced office", ...) — map free text to the CRM's fixed serviceTypes
+// options where possible, but fall back to the raw text rather than discarding it if nothing matches.
 function normaliseServiceType(raw: string) {
   const lower = raw.toLowerCase();
   if (!lower) return '';
   if (lower.includes('virtual')) return 'Virtual Office';
   if (lower.includes('co-working') || lower.includes('co working') || lower.includes('coworking') || lower.includes('desk')) return 'Co Working Office';
-  if (lower.includes('private')) return 'Private Office';
+  if (lower.includes('private') || lower.includes('serviced')) return 'Private Office';
   if (lower.includes('meeting')) return 'Meeting Room';
   return raw;
 }
@@ -110,7 +110,7 @@ export async function POST(req: NextRequest) {
     const companyName = sanitize(body.companyName || body.company_name || body.company, 150);
     const telephone = normalisePhone(sanitize(body.telephone || body.phone || body.phoneNumber || body.phone_number, 30));
     const email = sanitize(body.email || body.emailAddress || body.email_address, 200).toLowerCase();
-    const serviceType = normaliseServiceType(sanitize(body.serviceType || body.service_type || body.officeType || body.office_type || body.spaceType || body.space_type, 100));
+    const serviceType = normaliseServiceType(sanitize(body.serviceType || body.service_type || body.officeType || body.office_type || body.spaceType || body.space_type || body.type, 100));
     const location = sanitize(body.location || body.preferredLocation || body.preferred_location, 150);
     const enquiry = sanitize(body.enquiry || body.message || body.requirements, 2000);
     const siteLabel = siteLabelForOrigin(origin);
