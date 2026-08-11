@@ -588,7 +588,7 @@ export function ModulePage({ slug }: { slug: string }) {
             <tbody className="divide-y divide-slate-100">
               {loading ? <TableSkeleton cols={module.tableFields.length} /> : filtered.map((row) => (
                 <tr key={row.id} className="hover:bg-slate-50/70">
-                  <td className="px-5 py-4 whitespace-nowrap font-semibold">{row.title}<p className="text-xs font-normal text-slate-400">{new Date(row.createdAt).toLocaleString()}</p></td>
+                  <td className="px-5 py-4 whitespace-nowrap font-semibold">{row.title}<p className="text-xs font-normal text-slate-400">{fmtDate(row.createdAt)}</p></td>
                   {module.tableFields.map((field) => (
                     <td key={field} className="px-5 py-4 whitespace-nowrap">
                       {field === 'status' ? <span className="status-pill bg-orange-50 text-orange-700">{row.status}</span> : valueFor(row, field)}

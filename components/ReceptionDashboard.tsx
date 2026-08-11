@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/db';
+import { fmtDate } from '@/lib/utils';
 import { Mail, KeyRound, UserCheck, Wrench } from 'lucide-react';
 
 function startOfToday() {
@@ -82,7 +83,7 @@ export async function ReceptionDashboard() {
                   <td className="px-3 py-3 whitespace-nowrap font-semibold">{row.title}</td>
                   <td className="px-3 py-3 whitespace-nowrap capitalize">{row.module.replaceAll('-', ' ')}</td>
                   <td className="px-3 py-3 whitespace-nowrap"><span className="status-pill bg-orange-50 text-orange-700">{row.status}</span></td>
-                  <td className="px-3 py-3 whitespace-nowrap text-slate-500">{row.createdAt.toLocaleString()}</td>
+                  <td className="px-3 py-3 whitespace-nowrap text-slate-500">{fmtDate(row.createdAt)}</td>
                 </tr>
               ))}
             </tbody>

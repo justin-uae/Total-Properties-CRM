@@ -1,4 +1,5 @@
 import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
+import { fmtDate } from '@/lib/utils';
 
 /** Stamps a drawn signature image plus a "Signed by ... on ..." label onto the bottom-right corner of every page of an existing PDF. */
 export async function stampSignatureOnPdf(pdfBytes: Buffer, opts: { name: string; signaturePngDataUrl: string; signedAt: Date }): Promise<Buffer> {
@@ -17,7 +18,7 @@ export async function stampSignatureOnPdf(pdfBytes: Buffer, opts: { name: string
   const fontSize = 12;
   const textBottom = 10;
   const blue = rgb(0.09, 0.35, 0.85);
-  const label = `Signed by ${opts.name} on ${opts.signedAt.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}`;
+  const label = `Signed by ${opts.name} on ${fmtDate(opts.signedAt)}`;
 
   for (const page of doc.getPages()) {
     const { width } = page.getSize();

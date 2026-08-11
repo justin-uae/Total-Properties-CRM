@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation';
 import { prisma } from '@/lib/db';
-import { currency } from '@/lib/utils';
+import { currency, fmtDate } from '@/lib/utils';
 import { defaultRouteForRole, requireUser } from '@/lib/auth';
 import { Building2, CalendarDays, CreditCard, Receipt, UserPlus, Wrench } from 'lucide-react';
 
@@ -115,7 +115,7 @@ export default async function DashboardPage() {
                   <td className="px-3 py-3 whitespace-nowrap font-semibold">{row.title}</td>
                   <td className="px-3 py-3 whitespace-nowrap capitalize">{row.module.replaceAll('-', ' ')}</td>
                   <td className="px-3 py-3 whitespace-nowrap"><span className="status-pill bg-orange-50 text-orange-700">{row.status}</span></td>
-                  <td className="px-3 py-3 whitespace-nowrap text-slate-500">{row.createdAt.toLocaleString()}</td>
+                  <td className="px-3 py-3 whitespace-nowrap text-slate-500">{fmtDate(row.createdAt)}</td>
                 </tr>
               ))}
             </tbody>

@@ -10,11 +10,17 @@ export function currency(value: unknown, code = 'AED') {
   return new Intl.NumberFormat('en-AE', { style: 'currency', currency: code }).format(num);
 }
 
+// e.g. "18 Dec Friday 2026" — a single shared formatter instance (formatToParts lets us pick a
+// custom part order) reused across every call rather than constructed per-render.
+const dateFormatter = new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short', weekday: 'long', year: 'numeric' });
+
 export function fmtDate(value?: string | Date | null) {
   if (!value) return '—';
   const date = typeof value === 'string' ? new Date(value) : value;
   if (Number.isNaN(date.getTime())) return String(value);
-  return new Intl.DateTimeFormat('en-GB', { dateStyle: 'medium', timeStyle: 'short' }).format(date);
+  const parts = dateFormatter.formatToParts(date);
+  const part = (type: string) => parts.find((p) => p.type === type)?.value || '';
+  return `${part('day')} ${part('month')} ${part('weekday')} ${part('year')}`;
 }
 
 export function publicToken(prefix = 'tbc') {

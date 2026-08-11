@@ -5,6 +5,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { LogOut, Menu, Search, Bell, ChevronDown } from 'lucide-react';
 import { moduleGroups, modules, themes } from '@/lib/modules';
 import { navHiddenModules } from '@/lib/roleNav';
+import { fmtDate } from '@/lib/utils';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
 const NOTIFICATIONS_POLL_MS = 3 * 60 * 1000;
@@ -18,12 +19,6 @@ type NotificationItem = {
   overdue: boolean;
   reminderSent: boolean;
 };
-
-function fmtShortDate(value: string) {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
-  return date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
-}
 
 export type ShellUser = {
   id: string;
@@ -177,7 +172,7 @@ export function AppShell({ user, children }: { user: ShellUser; children: React.
                           <p className="text-sm font-semibold">{item.label || 'Untitled'}</p>
                           <p className="text-xs text-slate-500">{item.clientName}</p>
                           <p className={`mt-1 text-xs font-semibold ${item.overdue ? 'text-red-600' : 'text-orange-600'}`}>
-                            {item.overdue ? 'Overdue since' : 'Expires'} {fmtShortDate(item.expiryDate)}
+                            {item.overdue ? 'Overdue since' : 'Expires'} {fmtDate(item.expiryDate)}
                             {item.reminderSent ? ' · WhatsApp sent' : ''}
                           </p>
                         </Link>
