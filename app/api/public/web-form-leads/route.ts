@@ -131,7 +131,11 @@ export async function POST(req: NextRequest) {
       return d.telephone === telephone || (email && d.email === email);
     });
     if (isDuplicate) {
-      return NextResponse.json({ ok: true, message: 'Enquiry received' }, { headers });
+      // Still 200 (the visitor did nothing wrong) but flagged so this is diagnosable from
+      // server logs / the response body instead of looking like a silently dropped submission —
+      // this fires whenever the same phone or email submitted again within the last 24h.
+      console.log(`[web-form-leads] duplicate suppressed: ${siteLabel} — ${fullName} (${telephone}${email ? `, ${email}` : ''})`);
+      return NextResponse.json({ ok: true, duplicate: true, message: 'Enquiry received' }, { headers });
     }
 
     const record = await prisma.record.create({
