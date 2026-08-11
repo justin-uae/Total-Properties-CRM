@@ -4,7 +4,8 @@ import { useEffect, useState } from 'react';
 import { Spinner } from '@/components/ui/Spinner';
 
 type EmailTemplate = { subject: string; bodyHtml: string };
-type EmailTemplates = { quotation: EmailTemplate; invoice: EmailTemplate };
+type TemplateKey = 'quotation' | 'invoice' | 'contract' | 'contractRenewalReminder' | 'contractExpired' | 'chequeReminder' | 'chequeDepositNotice';
+type EmailTemplates = Record<TemplateKey, EmailTemplate>;
 type BankDetails = {
   bankName: string;
   accountName: string;
@@ -14,9 +15,24 @@ type BankDetails = {
   branch: string;
 };
 
-const TOKENS: Record<'quotation' | 'invoice', string[]> = {
+const TOKENS: Record<TemplateKey, string[]> = {
   quotation: ['{{clientName}}', '{{companyName}}', '{{quoteNumber}}', '{{link}}', '{{amount}}', '{{validUntil}}'],
-  invoice: ['{{clientName}}', '{{companyName}}', '{{invoiceNumber}}', '{{link}}', '{{amount}}', '{{dueDate}}']
+  invoice: ['{{clientName}}', '{{companyName}}', '{{invoiceNumber}}', '{{link}}', '{{amount}}', '{{dueDate}}'],
+  contract: ['{{clientName}}', '{{companyName}}', '{{contractNumber}}', '{{link}}', '{{endDate}}'],
+  contractRenewalReminder: ['{{clientName}}', '{{companyName}}', '{{contractNumber}}', '{{endDate}}'],
+  contractExpired: ['{{clientName}}', '{{companyName}}', '{{contractNumber}}', '{{endDate}}'],
+  chequeReminder: ['{{clientName}}', '{{companyName}}', '{{chequeDate}}', '{{amount}}', '{{bankName}}'],
+  chequeDepositNotice: ['{{clientName}}', '{{companyName}}', '{{chequeDate}}', '{{amount}}', '{{bankName}}', '{{link}}']
+};
+
+const TEMPLATE_LABELS: Record<TemplateKey, string> = {
+  quotation: 'Quotation Email',
+  invoice: 'Invoice Email',
+  contract: 'Contract Email',
+  contractRenewalReminder: 'Contract Renewal Reminder',
+  chequeReminder: 'Cheque Deposit Reminder',
+  chequeDepositNotice: 'Cheque Deposit Notice (20-Day)',
+  contractExpired: 'Contract Expired'
 };
 
 const BANK_FIELDS: { name: keyof BankDetails; label: string }[] = [
@@ -32,7 +48,7 @@ export function SettingsPage() {
   const [loading, setLoading] = useState(true);
   const [templates, setTemplates] = useState<EmailTemplates | null>(null);
   const [bankDetails, setBankDetails] = useState<BankDetails | null>(null);
-  const [activeTemplate, setActiveTemplate] = useState<'quotation' | 'invoice'>('quotation');
+  const [activeTemplate, setActiveTemplate] = useState<TemplateKey>('quotation');
   const [savingTemplates, setSavingTemplates] = useState(false);
   const [savingBank, setSavingBank] = useState(false);
   const [templateSaved, setTemplateSaved] = useState(false);
@@ -92,20 +108,20 @@ export function SettingsPage() {
       <div>
         <p className="text-sm font-bold uppercase tracking-widest text-[rgb(var(--accent))]">Admin</p>
         <h1 className="mt-1 text-2xl font-black sm:text-3xl">Settings</h1>
-        <p className="mt-2 max-w-3xl text-sm text-slate-500">Email templates and bank details used automatically on quotations and invoices.</p>
+        <p className="mt-2 max-w-3xl text-sm text-slate-500">Email templates and bank details used automatically on quotations, invoices and contracts.</p>
       </div>
 
       <div className="card p-6">
         <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
           <h2 className="text-xl font-bold">Email Templates</h2>
-          <div className="flex gap-2">
-            {(['quotation', 'invoice'] as const).map((key) => (
+          <div className="flex flex-wrap gap-2">
+            {(['quotation', 'invoice', 'contract', 'contractRenewalReminder', 'contractExpired', 'chequeReminder', 'chequeDepositNotice'] as const).map((key) => (
               <button
                 key={key}
                 onClick={() => setActiveTemplate(key)}
                 className={activeTemplate === key ? 'btn-primary px-3 py-1.5 text-sm' : 'btn-secondary px-3 py-1.5 text-sm'}
               >
-                {key === 'quotation' ? 'Quotation Email' : 'Invoice Email'}
+                {TEMPLATE_LABELS[key]}
               </button>
             ))}
           </div>
@@ -135,8 +151,19 @@ export function SettingsPage() {
             <p className="mt-1 text-xs text-slate-400">
               {activeTemplate === 'invoice'
                 ? 'The Pay Now button (when applicable) and bank details are appended automatically after this body.'
-                : 'The quotation PDF is attached automatically; any optional file attached on the quotation is sent alongside it.'}
+                : activeTemplate === 'quotation'
+                ? 'The quotation PDF is attached automatically; any optional file attached on the quotation is sent alongside it.'
+                : activeTemplate === 'contract'
+                ? 'Sent when a contract is manually sent from the Contracts module; the contract document is attached automatically.'
+                : activeTemplate === 'contractRenewalReminder'
+                ? 'Sent automatically 3 months before a contract’s end date.'
+                : activeTemplate === 'contractExpired'
+                ? 'Sent automatically on a contract’s end date.'
+                : activeTemplate === 'chequeReminder'
+                ? 'Sent automatically 5 days before a cheque’s deposit date.'
+                : 'Sent automatically 20 days before a cheque’s deposit date — also opens the tenant’s deferral/hold request window (20–15 days before).'}
             </p>
+            <p className="mt-1 text-xs text-slate-400">All emails are automatically CC’d to karen@totalproperty.ae and info@totalproperty.ae.</p>
           </div>
         </div>
 

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { login } from '@/lib/auth';
+import { defaultRouteForRole, login } from '@/lib/auth';
 import { rateLimit } from '@/lib/rate-limit';
 import { ipFromHeaders } from '@/lib/utils';
 
@@ -10,5 +10,5 @@ export async function POST(req: NextRequest) {
   const body = await req.json();
   const result = await login(String(body.email || ''), String(body.password || ''));
   if (!result.ok) return NextResponse.json(result, { status: 401 });
-  return NextResponse.json(result);
+  return NextResponse.json({ ...result, redirectTo: defaultRouteForRole(result.role) });
 }

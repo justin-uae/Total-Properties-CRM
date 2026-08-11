@@ -8,6 +8,7 @@ import { moduleMap } from '@/lib/modules';
 import { ipFromHeaders, publicToken } from '@/lib/utils';
 import { meetingRoomClash } from '@/lib/meeting-rooms';
 import { generateTicketNumber } from '@/lib/tickets';
+import { generateContractNumber } from '@/lib/contracts';
 import { applyRolePermissions } from '@/lib/permissions';
 
 function titleFor(module: string, data: any) {
@@ -83,6 +84,10 @@ export async function POST(req: NextRequest) {
     data.ticketNumber = await generateTicketNumber();
     data.reportedAt = new Date().toISOString();
     data.createdByStaff = true;
+  }
+
+  if (module === 'contracts') {
+    data.contractNumber = await generateContractNumber();
   }
 
   const record = await prisma.record.create({

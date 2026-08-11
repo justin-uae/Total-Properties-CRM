@@ -4,10 +4,45 @@ import { ipFromHeaders, normalisePhone } from '@/lib/utils';
 import { rateLimit } from '@/lib/rate-limit';
 
 // Restricts this public form endpoint to the marketing site(s) that are allowed to submit enquiries.
-const ALLOWED_ORIGINS = (process.env.PUBLIC_WEBSITE_ORIGIN || 'https://totalproperty.ae,https://www.totalproperty.ae')
+const DEFAULT_ALLOWED_ORIGINS = [
+  'https://totalproperty.ae', 'https://www.totalproperty.ae',
+  'https://officebroker.ae', 'https://www.officebroker.ae',
+  'https://officerental.ae', 'https://www.officerental.ae'
+].join(',');
+const ALLOWED_ORIGINS = (process.env.PUBLIC_WEBSITE_ORIGIN || DEFAULT_ALLOWED_ORIGINS)
   .split(',')
   .map((o) => o.trim())
   .filter(Boolean);
+
+// Which lead "Source" each site's submissions are tagged with — derived from the validated Origin
+// header (not a client-supplied field) so it can't be spoofed.
+const SITE_LABELS: Record<string, string> = {
+  'totalproperty.ae': 'Total Property Website',
+  'officebroker.ae': 'OfficeBroker Website',
+  'officerental.ae': 'OfficeRental Website'
+};
+
+function siteLabelForOrigin(origin: string) {
+  try {
+    const hostname = new URL(origin).hostname.replace(/^www\./, '');
+    return SITE_LABELS[hostname] || 'Website';
+  } catch {
+    return 'Website';
+  }
+}
+
+// The three sites use different wording for the office-type dropdown ("Private office space",
+// "Coworking desk", ...) — map free text to the CRM's fixed serviceTypes options where possible,
+// but fall back to the raw text rather than discarding it if nothing matches.
+function normaliseServiceType(raw: string) {
+  const lower = raw.toLowerCase();
+  if (!lower) return '';
+  if (lower.includes('virtual')) return 'Virtual Office';
+  if (lower.includes('co-working') || lower.includes('co working') || lower.includes('coworking') || lower.includes('desk')) return 'Co Working Office';
+  if (lower.includes('private')) return 'Private Office';
+  if (lower.includes('meeting')) return 'Meeting Room';
+  return raw;
+}
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const CONTROL_CHARS_RE = new RegExp('[\\x00-\\x1F\\x7F]', 'g');
@@ -69,12 +104,16 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ message: 'Unable to process request' }, { status: 400, headers });
     }
 
-    const fullName = sanitize(body.fullName || body.full_name, 150);
-    const telephone = normalisePhone(sanitize(body.telephone || body.phone, 30));
-    const email = sanitize(body.email, 200).toLowerCase();
-    const serviceType = sanitize(body.serviceType || body.service_type, 100);
-    const location = sanitize(body.location, 150);
-    const enquiry = sanitize(body.enquiry, 2000);
+    // Accepts every field-name variant used across totalproperty.ae ("fullName"/"phone"), officebroker.ae
+    // ("Full Name"/"Phone Number" → still fullName/phone on the wire) and officerental.ae ("name"/"company").
+    const fullName = sanitize(body.fullName || body.full_name || body.name, 150);
+    const companyName = sanitize(body.companyName || body.company_name || body.company, 150);
+    const telephone = normalisePhone(sanitize(body.telephone || body.phone || body.phoneNumber || body.phone_number, 30));
+    const email = sanitize(body.email || body.emailAddress || body.email_address, 200).toLowerCase();
+    const serviceType = normaliseServiceType(sanitize(body.serviceType || body.service_type || body.officeType || body.office_type || body.spaceType || body.space_type, 100));
+    const location = sanitize(body.location || body.preferredLocation || body.preferred_location, 150);
+    const enquiry = sanitize(body.enquiry || body.message || body.requirements, 2000);
+    const siteLabel = siteLabelForOrigin(origin);
 
     if (!fullName || !telephone || !enquiry) {
       return NextResponse.json({ message: 'Full name, telephone and enquiry are required' }, { status: 400, headers });
@@ -100,16 +139,18 @@ export async function POST(req: NextRequest) {
         module: 'web-form-leads',
         title: fullName,
         status: 'New',
-        source: 'Website',
+        source: siteLabel,
         location,
         data: {
           fullName,
+          companyName,
           email,
           telephone,
           serviceType,
           location,
           enquiry,
-          source: 'Website',
+          source: siteLabel,
+          siteOrigin: origin,
           ip,
           landingPage: sanitize(body.landingPage || body.landing_page, 300),
           referrer: sanitize(body.referrer, 300) || req.headers.get('referer') || '',

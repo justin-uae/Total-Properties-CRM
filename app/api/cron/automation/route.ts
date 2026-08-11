@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { sendWhatsAppTemplate } from '@/lib/whatsapp';
+import { sendContractRenewalReminderEmail, sendContractExpiredEmail, sendChequeDepositReminderEmail, sendChequeDepositNoticeEmail } from '@/lib/mail';
 
 const EXPIRY_TRIGGERS = new Set(['Contract Expiring', 'Document Expiring']);
 
@@ -18,6 +19,18 @@ export async function GET(req: Request) {
           const d = (record.data as any) || {};
           await prisma.record.update({ where: { id: payload.recordId }, data: { data: { ...d, whatsappReminderSentAt: new Date().toISOString() } } });
         }
+      }
+      if (item.trigger === 'Contract Renewal Reminder') {
+        await sendContractRenewalReminderEmail((item.payload as any).recordId);
+      }
+      if (item.trigger === 'Contract Expired') {
+        await sendContractExpiredEmail((item.payload as any).recordId);
+      }
+      if (item.trigger === 'Cheque Deposit Reminder') {
+        await sendChequeDepositReminderEmail((item.payload as any).recordId);
+      }
+      if (item.trigger === 'Cheque Deposit Notice') {
+        await sendChequeDepositNoticeEmail((item.payload as any).recordId);
       }
       await prisma.auditLog.create({ data: { action: `AUTOMATION:${item.trigger}`, module: 'automation-rules', after: item.payload as any } });
       await prisma.automationQueue.update({ where: { id: item.id }, data: { status: 'Completed', processedAt: new Date() } });

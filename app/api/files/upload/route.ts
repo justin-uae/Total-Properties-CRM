@@ -5,6 +5,7 @@ import { PermissionAction } from '@prisma/client';
 import { assertCan } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { uploadFile } from '@/lib/storage';
+import { moduleMap } from '@/lib/modules';
 
 const allowed = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'application/pdf'];
 
@@ -12,11 +13,16 @@ export async function POST(req: NextRequest) {
   try {
     const form = await req.formData();
     const module = String(form.get('module') || 'documents');
+    const fieldName = String(form.get('field') || '');
     const recordId = String(form.get('recordId') || '') || null;
     const user = await assertCan(module, PermissionAction.CREATE);
     const file = form.get('file');
     if (!(file instanceof File)) return NextResponse.json({ message: 'No file uploaded' }, { status: 400 });
-    if (!allowed.includes(file.type)) return NextResponse.json({ message: `File type not allowed. Accepted: PDF, JPG, PNG, WebP, GIF` }, { status: 400 });
+    const fieldAccept = moduleMap[module]?.fields.find((f) => f.name === fieldName)?.accept;
+    const allowedForField = fieldAccept || allowed;
+    if (!allowedForField.includes(file.type)) {
+      return NextResponse.json({ message: `File type not allowed. Accepted: ${allowedForField.map((m) => m.split('/')[1]?.toUpperCase() || m).join(', ')}` }, { status: 400 });
+    }
     if (file.size > 10 * 1024 * 1024) return NextResponse.json({ message: 'Maximum file size is 10 MB' }, { status: 400 });
     const buffer = Buffer.from(await file.arrayBuffer());
     const ext = path.extname(file.name).toLowerCase();

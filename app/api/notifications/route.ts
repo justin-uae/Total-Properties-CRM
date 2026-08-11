@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
-import { requireUser } from '@/lib/auth';
+import { can, requireUser } from '@/lib/auth';
 import { prisma } from '@/lib/db';
+import { PermissionAction } from '@prisma/client';
 
 const LOOKAHEAD_DAYS = 30;
 
@@ -15,7 +16,7 @@ type NotificationItem = {
 };
 
 export async function GET() {
-  await requireUser();
+  const user = await requireUser();
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -23,8 +24,12 @@ export async function GET() {
   horizon.setDate(horizon.getDate() + LOOKAHEAD_DAYS);
 
   const [contracts, documents] = await Promise.all([
-    prisma.record.findMany({ where: { module: 'contracts', status: { notIn: ['Expired', 'Cancelled'] } } }),
-    prisma.record.findMany({ where: { module: 'documents', status: { notIn: ['Expired', 'Archived', 'Missing'] } } })
+    can(user, 'contracts', PermissionAction.VIEW)
+      ? prisma.record.findMany({ where: { module: 'contracts', status: { notIn: ['Expired', 'Cancelled'] } } })
+      : Promise.resolve([]),
+    can(user, 'documents', PermissionAction.VIEW)
+      ? prisma.record.findMany({ where: { module: 'documents', status: { notIn: ['Expired', 'Archived', 'Missing'] } } })
+      : Promise.resolve([])
   ]);
 
   const items: NotificationItem[] = [];

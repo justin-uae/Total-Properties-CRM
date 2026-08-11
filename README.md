@@ -214,13 +214,14 @@ Files are not served publicly from `/public`. They should be downloaded via the 
 
 ## Cron / Automation
 
-Run due automation jobs using:
+Two cron routes work together — `expiry-scan` finds due reminders (contract renewal/expiry, document expiry) and queues them, `automation` sends whatever is queued (WhatsApp reminders, contract renewal/expiry emails):
 
 ```text
+https://yourdomain.com/api/cron/expiry-scan?key=YOUR_CRON_SECRET
 https://yourdomain.com/api/cron/automation?key=YOUR_CRON_SECRET
 ```
 
-Recommended schedule: every 5 minutes.
+Recommended schedule: `expiry-scan` once daily, `automation` every 5 minutes.
 
 Add to `.env`:
 

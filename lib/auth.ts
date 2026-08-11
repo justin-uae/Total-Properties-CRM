@@ -98,15 +98,22 @@ export async function tenantCompanyName(user: { clientRecordId: string | null })
   return (client?.data as any)?.companyName || client?.title || null;
 }
 
+/** Single source of truth for where a role lands after login / at "/" — keep AppShell's dashboard nav visibility in sync with this. */
+export function defaultRouteForRole(role: string) {
+  if (role === 'TENANT') return '/tenant-portal';
+  if (role === 'RECEPTION') return '/modules/reception-dashboard';
+  return '/dashboard';
+}
+
 export async function login(email: string, password: string) {
   const user = await prisma.user.findUnique({ where: { email: email.toLowerCase().trim() } });
-  if (!user) return { ok: false, message: 'Invalid email or password' };
+  if (!user) return { ok: false as const, message: 'Invalid email or password' };
 
   if (user.lockedUntil && user.lockedUntil > new Date()) {
-    return { ok: false, message: 'Account is temporarily locked. Try again later.' };
+    return { ok: false as const, message: 'Account is temporarily locked. Try again later.' };
   }
 
-  if (user.status !== 'ACTIVE') return { ok: false, message: 'Account is suspended.' };
+  if (user.status !== 'ACTIVE') return { ok: false as const, message: 'Account is suspended.' };
 
   const valid = await bcrypt.compare(password, user.passwordHash);
   if (!valid) {
@@ -118,10 +125,10 @@ export async function login(email: string, password: string) {
         lockedUntil: failedLoginCount >= 5 ? new Date(Date.now() + 15 * 60 * 1000) : null
       }
     });
-    return { ok: false, message: 'Invalid email or password' };
+    return { ok: false as const, message: 'Invalid email or password' };
   }
 
   await prisma.user.update({ where: { id: user.id }, data: { failedLoginCount: 0, lockedUntil: null, lastLoginAt: new Date() } });
   await setSession(user.id);
-  return { ok: true, message: 'Logged in', role: user.role };
+  return { ok: true as const, message: 'Logged in', role: user.role };
 }

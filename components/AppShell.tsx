@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { LogOut, Menu, Search, Bell, ChevronDown } from 'lucide-react';
 import { moduleGroups, modules, themes } from '@/lib/modules';
+import { navHiddenModules } from '@/lib/roleNav';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
 const NOTIFICATIONS_POLL_MS = 3 * 60 * 1000;
@@ -35,7 +36,10 @@ export type ShellUser = {
 
 function canSee(user: ShellUser, slug: string) {
   if (user.role === 'MASTER_ADMIN') return true;
-  if (slug === 'dashboard') return true;
+  // "dashboard" (business-wide overview) has no Permission rows for anyone by design —
+  // it's Master Admin-only, handled by the line above. Every other role's landing page
+  // is its own permissioned module (e.g. Reception -> reception-dashboard).
+  if ((navHiddenModules[user.role] || []).includes(slug)) return false;
   return user.permissions.some((p) => p.module === slug && p.action === 'VIEW');
 }
 
@@ -47,6 +51,9 @@ export function AppShell({ user, children }: { user: ShellUser; children: React.
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [notifOpen, setNotifOpen] = useState(false);
   const notifRef = useRef<HTMLDivElement>(null);
+  // Notifications are only ever contract/document expiries, so there's nothing to show
+  // (and nothing worth fetching) for a role that can't view either module.
+  const canSeeNotifications = user.role === 'MASTER_ADMIN' || user.permissions.some((p) => (p.module === 'contracts' || p.module === 'documents') && p.action === 'VIEW');
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
@@ -59,13 +66,14 @@ export function AppShell({ user, children }: { user: ShellUser; children: React.
   }, []);
 
   useEffect(() => {
+    if (!canSeeNotifications) return;
     function loadNotifications() {
       fetch('/api/notifications').then((r) => r.json()).then((json) => setNotifications(json.items || [])).catch(() => {});
     }
     loadNotifications();
     const interval = setInterval(loadNotifications, NOTIFICATIONS_POLL_MS);
     return () => clearInterval(interval);
-  }, []);
+  }, [canSeeNotifications]);
 
   useEffect(() => {
     if (!notifOpen) return;
@@ -141,6 +149,7 @@ export function AppShell({ user, children }: { user: ShellUser; children: React.
             <select value={theme} onChange={(e) => setTheme(e.target.value)} className="input hidden max-w-[160px] sm:block lg:max-w-[190px]">
               {themes.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
             </select>
+            {canSeeNotifications && (
             <div className="relative shrink-0" ref={notifRef}>
               <button onClick={() => setNotifOpen((v) => !v)} className="relative rounded-xl border border-slate-200 p-2.5 text-slate-600 hover:bg-slate-50 sm:p-3">
                 <Bell className="h-4 w-4" />
@@ -178,6 +187,7 @@ export function AppShell({ user, children }: { user: ShellUser; children: React.
                 </div>
               )}
             </div>
+            )}
             <div className="hidden items-center gap-2 rounded-2xl border border-slate-200 bg-white px-3 py-2 sm:flex">
               <div className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-[rgb(var(--accent))] text-sm font-bold text-white sm:h-9 sm:w-9">{user.name.slice(0, 2).toUpperCase()}</div>
               <div className="hidden text-sm lg:block">

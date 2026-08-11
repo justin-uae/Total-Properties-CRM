@@ -20,7 +20,8 @@ import {
   BellRing,
   Map,
   BriefcaseBusiness,
-  Settings
+  Settings,
+  Banknote
 } from 'lucide-react';
 
 export type FieldType = 'text' | 'email' | 'tel' | 'number' | 'money' | 'textarea' | 'select' | 'date' | 'time' | 'datetime' | 'checkbox' | 'checkbox-group' | 'file' | 'file-multi' | 'password';
@@ -43,8 +44,12 @@ export type ModuleField = {
   showWhen?: { field: string; equals: string };
   /** For type 'checkbox-group': several independent checkboxes rendered inline on one row, each storing its own boolean under form[name]. */
   groupFields?: { name: string; label: string }[];
+  /** For type 'file'/'file-multi': restricts the accepted MIME types (client input + server-side upload validation). Defaults to PDF/JPG/PNG/WebP/GIF. */
+  accept?: string[];
   placeholder?: string;
   colSpan?: 1 | 2;
+  /** Forces this field to start a fresh row (left column) in the 2-column form grid, regardless of how many fields precede it — use to keep a pair of colSpan:1 fields (e.g. two side-by-side attachments) reliably aligned instead of depending on field-count parity. */
+  newRow?: boolean;
 };
 
 export type ModuleConfig = {
@@ -63,7 +68,7 @@ export type ModuleConfig = {
 
 export const serviceTypes = ['Virtual Office', 'Co Working Office', 'Private Office', 'Meeting Room'];
 export const vatStatuses = ['VAT Registered', 'Non VAT Registered'];
-export const leadSources = ['Website', 'Telephone', 'WhatsApp', 'Walk-in', 'Google Ads', 'SEO', 'Referral', 'Instagram', 'Facebook', 'Agent/Broker', 'Existing Customer'];
+export const leadSources = ['Website', 'Total Property Website', 'OfficeBroker Website', 'OfficeRental Website', 'Telephone', 'WhatsApp', 'Walk-in', 'Google Ads', 'SEO', 'Referral', 'Instagram', 'Facebook', 'Agent/Broker', 'Existing Customer'];
 export const themes = [
   { id: 'modern-blue', name: 'Modern Blue' },
   { id: 'purple-elegance', name: 'Purple Elegance' },
@@ -91,13 +96,14 @@ export const modules: ModuleConfig[] = [
     title: 'Web Form Leads',
     singular: 'Web Form Lead',
     group: 'Sales',
-    description: 'Website form enquiries submitted from Total Business Centres websites.',
+    description: 'Contact / enquiry form submissions from totalproperty.ae, officebroker.ae and officerental.ae.',
     icon: UserPlus,
     defaultStatus: 'Contacted',
     statuses: ['New', 'Contacted', 'Quoted', 'Arrange for viewing', 'Closed'],
-    tableFields: ['fullName', 'telephone', 'email', 'enquiry', 'source', 'status'],
+    tableFields: ['telephone', 'email', 'enquiry', 'source', 'status'],
     fields: [
       { name: 'fullName', label: 'Full Name', type: 'text', required: true },
+      { name: 'companyName', label: 'Company Name', type: 'text' },
       { name: 'email', label: 'Email', type: 'email' },
       { name: 'telephone', label: 'Telephone', type: 'tel', required: true },
       { name: 'serviceType', label: 'Service Type', type: 'select', options: serviceTypes },
@@ -368,7 +374,7 @@ export const modules: ModuleConfig[] = [
     icon: Users,
     defaultStatus: 'Active',
     statuses: ['Prospect', 'Active', 'On Hold', 'Leaving', 'Former'],
-    tableFields: ['companyName', 'contactName', 'telephone', 'email', 'location', 'status'],
+    tableFields: ['companyName', 'contactName', 'telephone', 'email', 'status'],
     fields: [
       { name: 'companyName', label: 'Company Name', type: 'text', required: true },
       { name: 'contactName', label: 'Contact Name', type: 'text', required: true },
@@ -391,10 +397,10 @@ export const modules: ModuleConfig[] = [
     icon: FileText,
     defaultStatus: 'Draft',
     statuses: ['Draft', 'Sent', 'Signed By Client', 'Signed By Company', 'Active', 'Expired', 'Cancelled'],
-    tableFields: ['contractNumber', 'clientName', 'serviceType', 'startDate', 'endDate', 'status'],
+    tableFields: ['contractNumber', 'clientName', 'startDate', 'endDate', 'status'],
     fields: [
-      { name: 'contractNumber', label: 'Contract Number', type: 'text', required: true },
-      { name: 'clientName', label: 'Client / Company', type: 'select', optionsSource: 'clients', optionsValueField: 'companyName', required: true },
+      { name: 'clientName', label: 'Client / Company', type: 'select', optionsSource: 'clients', optionsValueField: 'companyName', required: true, autofill: { targetField: 'email', sourceDataField: 'email' } },
+      { name: 'email', label: 'Recipient Email', type: 'email' },
       { name: 'serviceType', label: 'Service Type', type: 'select', options: serviceTypes },
       { name: 'location', label: 'Location', type: 'text' },
       { name: 'startDate', label: 'Start Date', type: 'date', required: true },
@@ -403,7 +409,8 @@ export const modules: ModuleConfig[] = [
       { name: 'expiryReminderAt', label: 'Expiry Reminder', type: 'date' },
       { name: 'monthlyRent', label: 'Monthly Rent', type: 'money' },
       { name: 'depositAmount', label: 'Deposit Amount', type: 'money' },
-      { name: 'signedDocument', label: 'Signed Contract PDF', type: 'file' },
+      { name: 'contractDocument', label: 'Contract Document (to send)', type: 'file', colSpan: 2, accept: ['application/pdf'] },
+      { name: 'signedDocument', label: 'Signed Contract (uploaded or e-signed by tenant)', type: 'file', colSpan: 2 },
       { name: 'notes', label: 'Notes', type: 'textarea', colSpan: 2 }
     ]
   },
@@ -443,6 +450,30 @@ export const modules: ModuleConfig[] = [
       { name: 'deductionAmount', label: 'Deduction Amount', type: 'money' },
       { name: 'refundAmount', label: 'Refund Amount', type: 'money' },
       { name: 'refundDueDate', label: 'Refund Due Date', type: 'date' },
+      { name: 'notes', label: 'Notes', type: 'textarea', colSpan: 2 }
+    ]
+  },
+  {
+    slug: 'cheques',
+    title: 'Cheques',
+    singular: 'Cheque',
+    group: 'Clients',
+    description: 'Post-dated cheque tracking with deposit status, attachments, automated deposit reminders and tenant deferral/hold requests.',
+    icon: Banknote,
+    defaultStatus: 'Received',
+    statuses: ['Received', 'Cheque Deferred/Hold', 'Deposited', 'Paid By Bank Transfer', 'Paid By Cash', 'Returned'],
+    tableFields: ['clientName', 'amount', 'chequeDate', 'deferralStatus', 'status'],
+    fields: [
+      { name: 'clientName', label: 'Company Name', type: 'select', optionsSource: 'clients', optionsValueField: 'companyName', required: true, autofill: { targetField: 'email', sourceDataField: 'email' } },
+      { name: 'email', label: 'Recipient Email (for deposit reminder)', type: 'email' },
+      { name: 'amount', label: 'Amount', type: 'money', required: true },
+      { name: 'chequeDate', label: 'Date of the Cheque', type: 'date', required: true },
+      { name: 'receivedDate', label: 'Date the Cheque Was Received', type: 'date', required: true },
+      { name: 'handedOverBy', label: 'Handed Over By', type: 'text', required: true },
+      { name: 'handedOverByMobile', label: 'Mobile Number of Person Handing Over Cheque', type: 'tel' },
+      { name: 'bankName', label: 'Bank Name (on Cheque)', type: 'text', required: true },
+      { name: 'chequeReceipt', label: 'Cheque Receipt', type: 'file', newRow: true },
+      { name: 'scannedCheque', label: 'Scanned Cheque', type: 'file' },
       { name: 'notes', label: 'Notes', type: 'textarea', colSpan: 2 }
     ]
   },
@@ -487,7 +518,7 @@ export const modules: ModuleConfig[] = [
     icon: Receipt,
     defaultStatus: 'Draft',
     statuses: ['Draft', 'Sent', 'Viewed', 'Part Paid', 'Paid', 'Overdue', 'Cancelled'],
-    tableFields: ['invoiceNumber', 'clientName', 'amount', 'dueDate', 'viewCount', 'status'],
+    tableFields: ['invoiceNumber', 'clientName', 'amount', 'dueDate', 'status'],
     fields: [
       { name: 'invoiceNumber', label: 'Invoice Number', type: 'text', required: true },
       { name: 'clientName', label: 'Client / Company', type: 'text', required: true },
@@ -508,7 +539,7 @@ export const modules: ModuleConfig[] = [
     icon: CreditCard,
     defaultStatus: 'Received',
     statuses: ['Received', 'Pending', 'Failed', 'Refunded'],
-    tableFields: ['clientName', 'invoiceNumber', 'amount', 'method', 'paidAt', 'status'],
+    tableFields: ['clientName', 'invoiceNumber', 'amount', 'method', 'status'],
     fields: [
       { name: 'clientName', label: 'Client / Company', type: 'text', required: true },
       { name: 'invoiceNumber', label: 'Invoice Number', type: 'text' },
@@ -592,7 +623,7 @@ export const modules: ModuleConfig[] = [
     title: 'Settings',
     singular: 'Setting',
     group: 'Admin',
-    description: 'Email templates and bank details used across quotations and invoices.',
+    description: 'Email templates and bank details used across quotations, invoices and contracts.',
     icon: Settings,
     statuses: [],
     fields: [],

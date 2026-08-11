@@ -8,7 +8,7 @@ import { ImageLightbox } from '@/components/ui/ImageLightbox';
 import { InvoiceForm } from '@/components/InvoiceForm';
 import { QuotationForm } from '@/components/QuotationForm';
 import { MaintenanceDetail } from '@/components/MaintenanceDetail';
-import { Download, Eye, EyeOff, FileText, Plus, RefreshCw, Send, Trash2, Upload } from 'lucide-react';
+import { Check, Download, Eye, EyeOff, FileText, Plus, RefreshCw, Send, Trash2, Upload, X as XIcon } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 
 function WhatsAppIcon({ className }: { className?: string }) {
@@ -36,6 +36,24 @@ function isFileRef(v: unknown): v is FileRef {
   return typeof v === 'object' && v !== null && 'id' in v && 'name' in v;
 }
 
+const MIME_EXT: Record<string, string> = {
+  'application/pdf': '.pdf',
+  'image/jpeg': '.jpg,.jpeg',
+  'image/png': '.png',
+  'image/webp': '.webp',
+  'image/gif': '.gif'
+};
+const DEFAULT_ACCEPT = ['application/pdf', 'image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+
+function acceptAttr(accept?: string[]) {
+  return (accept || DEFAULT_ACCEPT).map((m) => MIME_EXT[m] || '').filter(Boolean).join(',');
+}
+
+function acceptHint(accept?: string[]) {
+  if (!accept) return 'PDF, JPG, PNG, WebP — max 10 MB';
+  return `${accept.map((m) => MIME_EXT[m]?.split(',')[0]?.slice(1).toUpperCase() || m).join(', ')} — max 10 MB`;
+}
+
 function valueFor(row: RecordRow, key: string) {
   if (key === 'status') return row.status;
   if (key === 'viewCount') return row.viewCount || 0;
@@ -44,6 +62,7 @@ function valueFor(row: RecordRow, key: string) {
   if (key.toLowerCase().includes('amount') || key.toLowerCase().includes('rate') || key.toLowerCase().includes('charge') || key === 'budget') return currency(value || 0);
   if (key.toLowerCase().includes('date') || key.toLowerCase().includes('at')) return fmtDate(value);
   if (typeof value === 'boolean') return value ? 'Yes' : 'No';
+  if (typeof value === 'string' && value.length > 40) return `${value.slice(0, 40)}…`;
   return value || '—';
 }
 
@@ -88,6 +107,8 @@ export function ModulePage({ slug }: { slug: string }) {
   const [invoiceFromQuoteRow, setInvoiceFromQuoteRow] = useState<RecordRow | null>(null);
   const [sendingEmail, setSendingEmail] = useState<Record<string, boolean>>({});
   const [emailSendError, setEmailSendError] = useState<Record<string, string>>({});
+  const [chequeActionLoading, setChequeActionLoading] = useState<Record<string, boolean>>({});
+  const [chequeActionError, setChequeActionError] = useState<Record<string, string>>({});
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<RecordRow | null>(null);
   const [query, setQuery] = useState('');
@@ -141,6 +162,20 @@ export function ModulePage({ slug }: { slug: string }) {
         ? records.find((r) => String(r.data?.[field.optionsValueField!] || '') === value)
         : records.find((r) => r.id === value);
       if (match) next[field.autofill.targetField] = match.data?.[field.autofill.sourceDataField] || '';
+    }
+    setForm(next);
+  }
+
+  function handleFieldChange(field: NonNullable<typeof module.fields>[number], value: string) {
+    const next = { ...form, [field.name]: value };
+    if (module.slug === 'contracts' && field.name === 'endDate' && value) {
+      const end = new Date(value);
+      if (!Number.isNaN(end.getTime())) {
+        const renewal = new Date(end);
+        renewal.setUTCMonth(renewal.getUTCMonth() - 3);
+        next.renewalReminderAt = renewal.toISOString().slice(0, 10);
+        next.expiryReminderAt = value;
+      }
     }
     setForm(next);
   }
@@ -210,6 +245,7 @@ export function ModulePage({ slug }: { slug: string }) {
       const fd = new FormData();
       fd.append('file', file);
       fd.append('module', module.slug);
+      fd.append('field', fieldName);
       if (editing) fd.append('recordId', editing.id);
       const res = await fetch('/api/files/upload', { method: 'POST', body: fd });
       let json: any = {};
@@ -235,6 +271,7 @@ export function ModulePage({ slug }: { slug: string }) {
         const fd = new FormData();
         fd.append('file', file);
         fd.append('module', module.slug);
+        fd.append('field', fieldName);
         if (editing) fd.append('recordId', editing.id);
         const res = await fetch('/api/files/upload', { method: 'POST', body: fd });
         let json: any = {};
@@ -285,7 +322,7 @@ export function ModulePage({ slug }: { slug: string }) {
     return sendDocumentEmailFor('invoices', invoiceId, key);
   }
 
-  async function sendDocumentEmailFor(kind: 'invoices' | 'quotes', id: string, key: string) {
+  async function sendDocumentEmailFor(kind: 'invoices' | 'quotes' | 'contracts', id: string, key: string) {
     setSendingEmail((s) => ({ ...s, [key]: true }));
     setEmailSendError((e) => ({ ...e, [key]: '' }));
     try {
@@ -295,6 +332,40 @@ export function ModulePage({ slug }: { slug: string }) {
       await load();
     } finally {
       setSendingEmail((s) => ({ ...s, [key]: false }));
+    }
+  }
+
+  async function setChequeDeferralDecision(row: RecordRow, decision: 'Approved' | 'Rejected') {
+    setChequeActionLoading((s) => ({ ...s, [row.id]: true }));
+    setChequeActionError((e) => ({ ...e, [row.id]: '' }));
+    try {
+      const res = await fetch(`/api/records/${row.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ module: 'cheques', status: row.status, data: { ...row.data, deferralStatus: decision } })
+      });
+      if (!res.ok) {
+        const json = await res.json();
+        setChequeActionError((e) => ({ ...e, [row.id]: json.message || 'Failed to update' }));
+        return;
+      }
+      await load();
+    } finally {
+      setChequeActionLoading((s) => ({ ...s, [row.id]: false }));
+    }
+  }
+
+  async function convertChequeToInvoice(row: RecordRow) {
+    setChequeActionLoading((s) => ({ ...s, [row.id]: true }));
+    setChequeActionError((e) => ({ ...e, [row.id]: '' }));
+    try {
+      const res = await fetch(`/api/cheques/${row.id}/convert-to-invoice`, { method: 'POST' });
+      const json = await res.json();
+      if (!res.ok && res.status !== 207) { setChequeActionError((e) => ({ ...e, [row.id]: json.message || 'Failed to create invoice' })); return; }
+      if (res.status === 207) setChequeActionError((e) => ({ ...e, [row.id]: json.message }));
+      await load();
+    } finally {
+      setChequeActionLoading((s) => ({ ...s, [row.id]: false }));
     }
   }
 
@@ -360,7 +431,7 @@ export function ModulePage({ slug }: { slug: string }) {
               .filter((field) => !(field.hideWhen && Boolean(form[field.hideWhen.field]) === Boolean(field.hideWhen.notEmpty)))
               .filter((field) => !field.showWhen || form[field.showWhen.field] === field.showWhen.equals)
               .map((field) => (
-              <div key={field.name} className={`min-w-0${field.colSpan === 2 ? ' md:col-span-2' : ''}`}>
+              <div key={field.name} className={`min-w-0${field.colSpan === 2 ? ' md:col-span-2' : ''}${field.newRow ? ' md:col-start-1' : ''}`}>
                 <label className="label">{field.label}{field.required ? ' *' : ''}</label>
                 {field.type === 'textarea' ? (
                   <textarea className="input min-h-28" disabled={saving} value={form[field.name] || ''} onChange={(e) => setForm({ ...form, [field.name]: e.target.value })} required={field.required} placeholder={field.placeholder} />
@@ -422,9 +493,9 @@ export function ModulePage({ slug }: { slug: string }) {
                         <Upload className="h-7 w-7 text-slate-400" />
                         <div>
                           <p className="text-sm font-medium text-slate-600">Click to upload</p>
-                          <p className="mt-0.5 text-xs text-slate-400">PDF, JPG, PNG, WebP — max 10 MB</p>
+                          <p className="mt-0.5 text-xs text-slate-400">{acceptHint(field.accept)}</p>
                         </div>
-                        <input type="file" className="sr-only" accept=".pdf,.jpg,.jpeg,.png,.webp,.gif" disabled={saving}
+                        <input type="file" className="sr-only" accept={acceptAttr(field.accept)} disabled={saving}
                           onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFileUpload(field.name, f); }} />
                       </label>
                     );
@@ -486,7 +557,7 @@ export function ModulePage({ slug }: { slug: string }) {
                 ) : field.type === 'datetime' ? (
                   <input className="input" disabled={saving} type="datetime-local" value={toDatetimeLocal(form[field.name])} onChange={(e) => setForm({ ...form, [field.name]: fromDatetimeLocal(e.target.value) })} required={field.required} />
                 ) : (
-                  <input className="input" disabled={saving} type={field.type === 'money' ? 'number' : field.type} step={field.type === 'money' ? '0.01' : undefined} value={form[field.name] || ''} onChange={(e) => setForm({ ...form, [field.name]: e.target.value })} required={field.required} placeholder={field.placeholder} />
+                  <input className="input" disabled={saving} type={field.type === 'money' ? 'number' : field.type} step={field.type === 'money' ? '0.01' : undefined} value={form[field.name] || ''} onChange={(e) => handleFieldChange(field, e.target.value)} required={field.required} placeholder={field.placeholder} />
                 )}
               </div>
             ))}
@@ -590,6 +661,69 @@ export function ModulePage({ slug }: { slug: string }) {
                         {emailSendError[row.id] && <span className="mt-0.5 text-[11px] font-medium text-red-600">{emailSendError[row.id]}</span>}
                       </span>
                     )}
+                    {module.slug === 'contracts' && row.data.email && (
+                      <span className="mr-2 inline-flex flex-col items-end">
+                        <button
+                          onClick={() => sendDocumentEmailFor('contracts', row.id, row.id)}
+                          disabled={sendingEmail[row.id]}
+                          title={row.data.contractEmailSentAt ? 'Resend Contract Email' : 'Send Contract Email'}
+                          className="rounded-lg px-2 py-1 text-xs font-semibold text-blue-600 hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-40"
+                        >
+                          <Send className="inline h-3.5 w-3.5 mr-1" />
+                          {sendingEmail[row.id] ? 'Sending…' : row.data.contractEmailSentAt ? 'Resend Contract' : 'Send Contract'}
+                        </button>
+                        {emailSendError[row.id] && <span className="mt-0.5 text-[11px] font-medium text-red-600">{emailSendError[row.id]}</span>}
+                      </span>
+                    )}
+                    {module.slug === 'cheques' && (
+                      <span className="mr-2 inline-flex max-w-[220px] flex-col items-end whitespace-normal">
+                        <span className="flex flex-wrap justify-end gap-1.5">
+                          {row.data.deferralStatus === 'Requested' && (
+                            <>
+                              <button
+                                onClick={() => setChequeDeferralDecision(row, 'Approved')}
+                                disabled={chequeActionLoading[row.id]}
+                                title="Approve Deferral Request"
+                                className="rounded-lg px-2 py-1 text-xs font-semibold text-green-600 hover:bg-green-50 disabled:cursor-not-allowed disabled:opacity-40"
+                              >
+                                <Check className="inline h-3.5 w-3.5 mr-1" />Approve
+                              </button>
+                              <button
+                                onClick={() => { if (confirm('Reject this cheque deferral/hold request?')) setChequeDeferralDecision(row, 'Rejected'); }}
+                                disabled={chequeActionLoading[row.id]}
+                                title="Reject Deferral Request"
+                                className="rounded-lg px-2 py-1 text-xs font-semibold text-red-600 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-40"
+                              >
+                                <XIcon className="inline h-3.5 w-3.5 mr-1" />Reject
+                              </button>
+                            </>
+                          )}
+                          {row.data.deferralStatus === 'Approved' && !row.data.deferralInvoiceId && (
+                            <button
+                              onClick={() => convertChequeToInvoice(row)}
+                              disabled={chequeActionLoading[row.id]}
+                              title="Convert Deferral Fee to Invoice"
+                              className="rounded-lg px-2 py-1 text-xs font-semibold text-blue-600 hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-40"
+                            >
+                              <FileText className="inline h-3.5 w-3.5 mr-1" />
+                              {chequeActionLoading[row.id] ? 'Converting…' : 'Convert to Invoice'}
+                            </button>
+                          )}
+                          {row.data.deferralInvoiceId && (
+                            <button
+                              onClick={() => sendInvoiceEmailFor(row.data.deferralInvoiceId, row.id)}
+                              disabled={sendingEmail[row.id]}
+                              title="Resend Deferral Fee Invoice"
+                              className="rounded-lg px-2 py-1 text-xs font-semibold text-blue-600 hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-40"
+                            >
+                              <Send className="inline h-3.5 w-3.5 mr-1" />
+                              {sendingEmail[row.id] ? 'Sending…' : 'Resend Invoice'}
+                            </button>
+                          )}
+                        </span>
+                        {chequeActionError[row.id] && <span className="mt-0.5 text-[11px] font-medium text-red-600">{chequeActionError[row.id]}</span>}
+                      </span>
+                    )}
                     {module.slug === 'quotations' && row.status === 'Accepted' && (
                       row.data.invoiceId ? (
                         <span className="mr-2 inline-flex flex-col items-end">
@@ -616,7 +750,7 @@ export function ModulePage({ slug }: { slug: string }) {
                         </button>
                       )
                     )}
-                    {module.slug === 'clients' && row.data.telephone && (
+                    {(module.slug === 'clients' || module.slug === 'leads') && row.data.telephone && (
                       <a
                         href={`https://wa.me/${String(row.data.telephone).replace(/[^0-9]/g, '')}`}
                         target="_blank"
@@ -705,7 +839,6 @@ export function ModulePage({ slug }: { slug: string }) {
 
 function SystemModule({ module }: { module: ModuleConfig; }) {
   const cards = {
-    'reception-dashboard': ['Visitors today', 'Mail waiting', 'Rooms booked', 'Open maintenance', 'Access returns due', 'Walk-in leads'],
     'floor-plan': ['Available units', 'Occupied units', 'Reserved units', 'Expiring soon', 'Under maintenance', 'Vacant by location'],
     'payment-alerts': ['Due today', 'Overdue 1–30 days', 'Overdue 31–60 days', 'Overdue 60+ days', 'Stripe failed', 'Deposit refunds due'],
     dashboard: []

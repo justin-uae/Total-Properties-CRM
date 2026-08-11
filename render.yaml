@@ -19,6 +19,8 @@ services:
         sync: false
       - key: NEXT_PUBLIC_APP_URL
         sync: false
+      - key: PUBLIC_WEBSITE_ORIGIN
+        sync: false
       - key: SESSION_SECRET
         generateValue: true
       - key: SMTP_HOST

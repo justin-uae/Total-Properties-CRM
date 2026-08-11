@@ -3,7 +3,7 @@ import { requireTenantApi, tenantCompanyName } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { downloadFile } from '@/lib/storage';
 
-const ALLOWED_MODULES = ['documents', 'maintenance'];
+const ALLOWED_MODULES = ['documents', 'maintenance', 'contracts', 'cheques'];
 
 export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const user = await requireTenantApi();

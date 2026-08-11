@@ -10,6 +10,8 @@ import { BRAND_ACCENT } from '@/lib/pdfBranding';
 import { currency, fmtDate } from '@/lib/utils';
 import { downloadFile } from '@/lib/storage';
 
+const CRM_CC_RECIPIENTS = ['karen@totalproperty.ae', 'info@totalproperty.ae'];
+
 function bankDetailsHtml(bankDetails: Record<string, string> | undefined) {
   if (!bankDetails) return '';
   const rows = ([
@@ -95,6 +97,7 @@ export async function sendInvoiceEmail(invoiceId: string) {
   await transporter.sendMail({
     from: process.env.SMTP_FROM || `${companyName} <noreply@example.com>`,
     to: data.email,
+    cc: CRM_CC_RECIPIENTS,
     subject,
     html,
     attachments
@@ -171,6 +174,7 @@ export async function sendQuotationEmail(quoteId: string) {
   await transporter.sendMail({
     from: process.env.SMTP_FROM || `${companyName} <noreply@example.com>`,
     to: data.email,
+    cc: CRM_CC_RECIPIENTS,
     subject,
     html: bodyHtml,
     attachments
@@ -180,4 +184,166 @@ export async function sendQuotationEmail(quoteId: string) {
     where: { id: quoteId },
     data: { status: quote.status === 'Draft' ? 'Sent' : quote.status, data: { ...data, quoteEmailSentAt: new Date().toISOString() } }
   });
+}
+
+export async function sendContractEmail(contractId: string) {
+  const contract = await prisma.record.findUnique({ where: { id: contractId } });
+  if (!contract || contract.module !== 'contracts') throw new Error('Contract not found');
+  const data = contract.data as any;
+  if (!data.email) throw new Error('Contract recipient email is missing');
+  if (!data.contractDocument?.id) throw new Error('Attach a contract document before sending');
+  if (!process.env.SMTP_HOST) throw new Error('SMTP is not configured');
+
+  const settings = await getSettings();
+  const companyName = String(settings.companyName || 'Our Company');
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+
+  const transporter = nodemailer.createTransport({
+    host: process.env.SMTP_HOST,
+    port: Number(process.env.SMTP_PORT || 587),
+    secure: Number(process.env.SMTP_PORT || 587) === 465,
+    auth: process.env.SMTP_USER ? { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS } : undefined
+  });
+
+  const file = await prisma.fileObject.findUnique({ where: { id: data.contractDocument.id } });
+  if (!file) throw new Error('Contract document could not be found');
+  const blob = await downloadFile(file.storedName);
+  const attachments = [{ filename: file.originalName, content: Buffer.from(await blob.arrayBuffer()) }];
+
+  const tokens = {
+    clientName: data.clientName || 'Customer',
+    companyName,
+    contractNumber: data.contractNumber || '',
+    endDate: data.endDate ? fmtDate(data.endDate) : '',
+    link: `${appUrl}/tenant-portal/contracts`
+  };
+  const template = (settings.emailTemplates as any)?.contract || {};
+  const subject = renderTemplate(String(template.subject || `Contract {{contractNumber}} from {{companyName}}`), tokens);
+  const bodyHtml = renderTemplate(
+    String(
+      template.bodyHtml ||
+        '<p>Dear {{clientName}},</p>' +
+          '<p>Please find attached your contract from {{companyName}} for your review.</p>' +
+          '<p>You can review, digitally sign, or upload a signed copy of this contract by logging in to your Tenant Account:</p>' +
+          '<p><a href="{{link}}">{{link}}</a></p>' +
+          '<p>If you have any questions, please do not hesitate to contact us.</p>' +
+          '<p>Warm regards,<br>{{companyName}}</p>'
+    ),
+    tokens
+  );
+
+  await transporter.sendMail({
+    from: process.env.SMTP_FROM || `${companyName} <noreply@example.com>`,
+    to: data.email,
+    cc: CRM_CC_RECIPIENTS,
+    subject,
+    html: bodyHtml,
+    attachments
+  });
+
+  await prisma.record.update({
+    where: { id: contractId },
+    data: { status: contract.status === 'Draft' ? 'Sent' : contract.status, data: { ...data, contractEmailSentAt: new Date().toISOString() } }
+  });
+}
+
+async function sendContractLifecycleEmail(contractId: string, templateKey: 'contractRenewalReminder' | 'contractExpired', sentAtField: string) {
+  const contract = await prisma.record.findUnique({ where: { id: contractId } });
+  if (!contract || contract.module !== 'contracts') throw new Error('Contract not found');
+  const data = contract.data as any;
+  if (!data.email) throw new Error('Contract recipient email is missing');
+  if (!process.env.SMTP_HOST) throw new Error('SMTP is not configured');
+
+  const settings = await getSettings();
+  const companyName = String(settings.companyName || 'Our Company');
+
+  const transporter = nodemailer.createTransport({
+    host: process.env.SMTP_HOST,
+    port: Number(process.env.SMTP_PORT || 587),
+    secure: Number(process.env.SMTP_PORT || 587) === 465,
+    auth: process.env.SMTP_USER ? { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS } : undefined
+  });
+
+  const tokens = {
+    clientName: data.clientName || 'Customer',
+    companyName,
+    contractNumber: data.contractNumber || '',
+    endDate: data.endDate ? fmtDate(data.endDate) : ''
+  };
+  const template = (settings.emailTemplates as any)?.[templateKey] || {};
+  const subject = renderTemplate(String(template.subject || 'Contract {{contractNumber}} — {{clientName}}'), tokens);
+  const bodyHtml = renderTemplate(String(template.bodyHtml || '<p>Dear {{clientName}},</p>'), tokens);
+
+  await transporter.sendMail({
+    from: process.env.SMTP_FROM || `${companyName} <noreply@example.com>`,
+    to: data.email,
+    cc: CRM_CC_RECIPIENTS,
+    subject,
+    html: bodyHtml
+  });
+
+  await prisma.record.update({
+    where: { id: contractId },
+    data: { data: { ...data, [sentAtField]: new Date().toISOString() } }
+  });
+}
+
+export async function sendContractRenewalReminderEmail(contractId: string) {
+  return sendContractLifecycleEmail(contractId, 'contractRenewalReminder', 'renewalReminderEmailSentAt');
+}
+
+export async function sendContractExpiredEmail(contractId: string) {
+  return sendContractLifecycleEmail(contractId, 'contractExpired', 'expiryReminderEmailSentAt');
+}
+
+async function sendChequeLifecycleEmail(chequeId: string, templateKey: 'chequeReminder' | 'chequeDepositNotice', sentAtField: string, fallbackSubject: string) {
+  const cheque = await prisma.record.findUnique({ where: { id: chequeId } });
+  if (!cheque || cheque.module !== 'cheques') throw new Error('Cheque not found');
+  const data = cheque.data as any;
+  if (!data.email) throw new Error('Cheque recipient email is missing');
+  if (!process.env.SMTP_HOST) throw new Error('SMTP is not configured');
+
+  const settings = await getSettings();
+  const companyName = String(settings.companyName || 'Our Company');
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+
+  const transporter = nodemailer.createTransport({
+    host: process.env.SMTP_HOST,
+    port: Number(process.env.SMTP_PORT || 587),
+    secure: Number(process.env.SMTP_PORT || 587) === 465,
+    auth: process.env.SMTP_USER ? { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS } : undefined
+  });
+
+  const tokens = {
+    clientName: data.clientName || 'Customer',
+    companyName,
+    chequeDate: data.chequeDate ? fmtDate(data.chequeDate) : '',
+    amount: currency(data.amount ?? 0),
+    bankName: data.bankName || '',
+    link: `${appUrl}/tenant-portal/cheques`
+  };
+  const template = (settings.emailTemplates as any)?.[templateKey] || {};
+  const subject = renderTemplate(String(template.subject || fallbackSubject), tokens);
+  const bodyHtml = renderTemplate(String(template.bodyHtml || '<p>Dear {{clientName}},</p>'), tokens);
+
+  await transporter.sendMail({
+    from: process.env.SMTP_FROM || `${companyName} <noreply@example.com>`,
+    to: data.email,
+    cc: CRM_CC_RECIPIENTS,
+    subject,
+    html: bodyHtml
+  });
+
+  await prisma.record.update({
+    where: { id: chequeId },
+    data: { data: { ...data, [sentAtField]: new Date().toISOString() } }
+  });
+}
+
+export async function sendChequeDepositReminderEmail(chequeId: string) {
+  return sendChequeLifecycleEmail(chequeId, 'chequeReminder', 'depositReminderEmailSentAt', 'Cheque Deposit Reminder – Payment Due on {{chequeDate}} | {{clientName}}');
+}
+
+export async function sendChequeDepositNoticeEmail(chequeId: string) {
+  return sendChequeLifecycleEmail(chequeId, 'chequeDepositNotice', 'depositNoticeEmailSentAt', 'Cheque Deposit Notice – Cheque Scheduled for {{chequeDate}} | {{clientName}}');
 }

@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { LogOut, Menu, LayoutDashboard, KeyRound, Wrench, DoorOpen, FolderOpen, Mail } from 'lucide-react';
+import { LogOut, Menu, LayoutDashboard, KeyRound, Wrench, DoorOpen, FolderOpen, Mail, FileSignature, Banknote } from 'lucide-react';
 import { useState } from 'react';
 
 const links = [
@@ -11,7 +11,9 @@ const links = [
   { href: '/tenant-portal/mail-parcels', label: 'Mail & Parcels', icon: Mail },
   { href: '/tenant-portal/maintenance', label: 'Maintenance Tickets', icon: Wrench },
   { href: '/tenant-portal/meeting-rooms', label: 'Meeting Rooms', icon: DoorOpen },
-  { href: '/tenant-portal/documents', label: 'Documents', icon: FolderOpen }
+  { href: '/tenant-portal/documents', label: 'Documents', icon: FolderOpen },
+  { href: '/tenant-portal/contracts', label: 'Contracts', icon: FileSignature },
+  { href: '/tenant-portal/cheques', label: 'Cheques', icon: Banknote }
 ];
 
 export function TenantShell({ companyName, children }: { companyName: string; children: React.ReactNode }) {

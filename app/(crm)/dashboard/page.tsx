@@ -1,5 +1,7 @@
+import { redirect } from 'next/navigation';
 import { prisma } from '@/lib/db';
 import { currency } from '@/lib/utils';
+import { defaultRouteForRole, requireUser } from '@/lib/auth';
 import { Building2, CalendarDays, CreditCard, Receipt, UserPlus, Wrench } from 'lucide-react';
 
 async function count(module: string, status?: string) {
@@ -12,6 +14,11 @@ async function sumInvoices() {
 }
 
 export default async function DashboardPage() {
+  const user = await requireUser();
+  // This dashboard surfaces business-wide figures (revenue, leads, occupancy) that
+  // only Master Admin should see — everyone else has their own landing page.
+  if (user.role !== 'MASTER_ADMIN') redirect(defaultRouteForRole(user.role));
+
   const newLeads = await count('leads', 'New');
   const activeClients = await count('clients', 'Active');
   const openTickets = await count('maintenance', 'Open');

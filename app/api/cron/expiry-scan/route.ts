@@ -76,5 +76,42 @@ export async function GET(req: Request) {
     }
   }
 
+  // Direct-to-email reminders (contract renewal/expiry, cheque deposit) — sent to the record's
+  // own `email` field rather than a WhatsApp phone lookup, each keyed by its own "queued" flag
+  // so a rerun of this scan doesn't queue the same reminder twice.
+  async function queueEmailReminders(module: string, excludeStatuses: string[], emailTargets: { dateField: string; flag: string; trigger: string; daysBefore?: number }[]) {
+    const records = await prisma.record.findMany({ where: { module } });
+    for (const record of records) {
+      if (excludeStatuses.includes(record.status)) continue;
+      const d = { ...((record.data as any) || {}) };
+      if (!d.email) continue;
+      let changed = false;
+      for (const target of emailTargets) {
+        if (d[target.flag]) continue;
+        if (!isDue(d[target.dateField], target.daysBefore ?? 0)) continue;
+        await prisma.automationQueue.create({
+          data: { trigger: target.trigger, payload: { recordId: record.id }, runAt: new Date() }
+        });
+        d[target.flag] = new Date().toISOString();
+        changed = true;
+        queued++;
+      }
+      if (changed) await prisma.record.update({ where: { id: record.id }, data: { data: d } });
+    }
+  }
+
+  await queueEmailReminders('contracts', ['Expired', 'Cancelled'], [
+    { dateField: 'renewalReminderAt', flag: 'renewalEmailQueuedAt', trigger: 'Contract Renewal Reminder' },
+    { dateField: 'expiryReminderAt', flag: 'expiryEmailQueuedAt', trigger: 'Contract Expired' }
+  ]);
+
+  // Cheque deposit reminders, both direct off chequeDate (no separate "reminder date" field
+  // needed since both offsets are fixed business rules): the 20-day notice also announces the
+  // tenant's 20-to-15-day deferral/hold request window, the 5-day one is the final reminder.
+  await queueEmailReminders('cheques', ['Deposited', 'Paid By Bank Transfer', 'Paid By Cash', 'Returned'], [
+    { dateField: 'chequeDate', flag: 'depositNoticeQueuedAt', trigger: 'Cheque Deposit Notice', daysBefore: 20 },
+    { dateField: 'chequeDate', flag: 'depositReminderQueuedAt', trigger: 'Cheque Deposit Reminder', daysBefore: 5 }
+  ]);
+
   return NextResponse.json({ queued, skippedNoPhone });
 }
