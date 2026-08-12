@@ -43,3 +43,40 @@ services:
         sync: false
       - key: WHATSAPP_APP_SECRET
         sync: false
+      # Shared with both cron services below — protects /api/cron/* from being triggered by
+      # anyone who finds the URL. Must be set to the SAME value on the web service and both
+      # cron jobs (Render Blueprints don't auto-share env vars across services).
+      - key: CRON_SECRET
+        sync: false
+
+  # Finds due reminders (contract renewal/expiry, cheque deposit notice/reminder, document
+  # expiry) and queues them — see app/api/cron/expiry-scan/route.ts. Dates only change once a
+  # day, so a daily run is enough; 03:00 UTC = ~07:00 Gulf Standard Time, before office hours.
+  - type: cron
+    name: total-business-centres-crm-expiry-scan
+    runtime: node
+    plan: starter
+    schedule: "0 3 * * *"
+    buildCommand: echo "no build required"
+    startCommand: curl -fsS "$APP_BASE_URL/api/cron/expiry-scan?key=$CRON_SECRET"
+    envVars:
+      - key: APP_BASE_URL
+        value: https://www.crm.totalproperty.ae
+      - key: CRON_SECRET
+        sync: false
+
+  # Sends whatever expiry-scan queued (WhatsApp reminders, contract/cheque reminder emails) —
+  # see app/api/cron/automation/route.ts. Runs frequently so reminders go out promptly after
+  # being queued, without needing anyone to click the manual "Send Reminder" buttons.
+  - type: cron
+    name: total-business-centres-crm-automation
+    runtime: node
+    plan: starter
+    schedule: "*/5 * * * *"
+    buildCommand: echo "no build required"
+    startCommand: curl -fsS "$APP_BASE_URL/api/cron/automation?key=$CRON_SECRET"
+    envVars:
+      - key: APP_BASE_URL
+        value: https://www.crm.totalproperty.ae
+      - key: CRON_SECRET
+        sync: false

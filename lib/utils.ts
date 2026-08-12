@@ -40,6 +40,22 @@ export function normalisePhone(phone?: string) {
   return (phone || '').replace(/[^0-9+]/g, '');
 }
 
+/**
+ * True once today is on/after (dateStr - daysBefore) — the single source of truth for when a
+ * reminder is "due", shared by the expiry-scan cron (which queues it automatically) and the
+ * admin UI (which uses it to decide whether to show a manual "Send Reminder" button).
+ */
+export function isReminderDue(dateStr?: string | null, daysBefore = 0) {
+  if (!dateStr) return false;
+  const target = new Date(dateStr);
+  if (Number.isNaN(target.getTime())) return false;
+  target.setDate(target.getDate() - daysBefore);
+  target.setHours(0, 0, 0, 0);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return today >= target;
+}
+
 /** Converts an ISO datetime string to the local `yyyy-MM-ddTHH:mm` value an <input type="datetime-local"> expects. */
 export function toDatetimeLocal(value?: string | null) {
   if (!value) return '';

@@ -1,18 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { getSettings } from '@/lib/settings';
-import { normalisePhone } from '@/lib/utils';
-
-function isDue(dateStr: string | undefined, daysBefore = 0) {
-  if (!dateStr) return false;
-  const target = new Date(dateStr);
-  if (Number.isNaN(target.getTime())) return false;
-  target.setDate(target.getDate() - daysBefore);
-  target.setHours(0, 0, 0, 0);
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  return today >= target;
-}
+import { normalisePhone, isReminderDue as isDue } from '@/lib/utils';
 
 export async function GET(req: Request) {
   const key = new URL(req.url).searchParams.get('key');

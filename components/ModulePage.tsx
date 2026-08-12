@@ -1,7 +1,7 @@
 'use client';
 
 import { ModuleConfig, moduleMap } from '@/lib/modules';
-import { currency, fmtDate, toDatetimeLocal, fromDatetimeLocal } from '@/lib/utils';
+import { currency, fmtDate, toDatetimeLocal, fromDatetimeLocal, isReminderDue } from '@/lib/utils';
 import { Spinner } from '@/components/ui/Spinner';
 import { Combobox } from '@/components/ui/Combobox';
 import { ImageLightbox } from '@/components/ui/ImageLightbox';
@@ -109,6 +109,7 @@ export function ModulePage({ slug }: { slug: string }) {
   const [emailSendError, setEmailSendError] = useState<Record<string, string>>({});
   const [chequeActionLoading, setChequeActionLoading] = useState<Record<string, boolean>>({});
   const [chequeActionError, setChequeActionError] = useState<Record<string, string>>({});
+  const [confirmReminder, setConfirmReminder] = useState<{ url: string; key: string; title: string; description: string } | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<RecordRow | null>(null);
   const [query, setQuery] = useState('');
@@ -323,16 +324,27 @@ export function ModulePage({ slug }: { slug: string }) {
   }
 
   async function sendDocumentEmailFor(kind: 'invoices' | 'quotes' | 'contracts', id: string, key: string) {
+    return sendReminderEmailFor(`/api/${kind}/${id}/email`, key);
+  }
+
+  async function sendReminderEmailFor(url: string, key: string) {
     setSendingEmail((s) => ({ ...s, [key]: true }));
     setEmailSendError((e) => ({ ...e, [key]: '' }));
     try {
-      const res = await fetch(`/api/${kind}/${id}/email`, { method: 'POST' });
+      const res = await fetch(url, { method: 'POST' });
       const json = await res.json();
-      if (!res.ok) { setEmailSendError((e) => ({ ...e, [key]: json.message || 'Failed to send' })); return; }
+      if (!res.ok) { setEmailSendError((e) => ({ ...e, [key]: json.message || 'Failed to send' })); return false; }
       await load();
+      return true;
     } finally {
       setSendingEmail((s) => ({ ...s, [key]: false }));
     }
+  }
+
+  async function sendConfirmedReminder() {
+    if (!confirmReminder) return;
+    const ok = await sendReminderEmailFor(confirmReminder.url, confirmReminder.key);
+    if (ok) setConfirmReminder(null);
   }
 
   async function setChequeDeferralDecision(row: RecordRow, decision: 'Approved' | 'Rejected') {
@@ -675,6 +687,58 @@ export function ModulePage({ slug }: { slug: string }) {
                         {emailSendError[row.id] && <span className="mt-0.5 text-[11px] font-medium text-red-600">{emailSendError[row.id]}</span>}
                       </span>
                     )}
+                    {module.slug === 'contracts' && row.data.email && !['Expired', 'Cancelled'].includes(row.status) && isReminderDue(row.data.renewalReminderAt, 0) && (
+                      <span className="mr-2 inline-flex flex-col items-end">
+                        <button
+                          onClick={() => setConfirmReminder({ url: `/api/contracts/${row.id}/renewal-reminder`, key: `${row.id}-renewal`, title: 'Send Renewal Reminder', description: `Send the renewal reminder email for ${row.title}?` })}
+                          disabled={sendingEmail[`${row.id}-renewal`]}
+                          title={row.data.renewalReminderEmailSentAt ? 'Resend Renewal Reminder' : 'Send Renewal Reminder'}
+                          className="rounded-lg px-2 py-1 text-xs font-semibold text-amber-600 hover:bg-amber-50 disabled:cursor-not-allowed disabled:opacity-40"
+                        >
+                          <Send className="inline h-3.5 w-3.5 mr-1" />
+                          {row.data.renewalReminderEmailSentAt ? 'Resend Renewal' : 'Renewal Reminder'}
+                        </button>
+                      </span>
+                    )}
+                    {module.slug === 'contracts' && row.data.email && !['Expired', 'Cancelled'].includes(row.status) && isReminderDue(row.data.expiryReminderAt, 0) && (
+                      <span className="mr-2 inline-flex flex-col items-end">
+                        <button
+                          onClick={() => setConfirmReminder({ url: `/api/contracts/${row.id}/expiry-reminder`, key: `${row.id}-expiry`, title: 'Send Expiry Reminder', description: `Send the expiry reminder email for ${row.title}?` })}
+                          disabled={sendingEmail[`${row.id}-expiry`]}
+                          title={row.data.expiryReminderEmailSentAt ? 'Resend Expiry Reminder' : 'Send Expiry Reminder'}
+                          className="rounded-lg px-2 py-1 text-xs font-semibold text-red-500 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-40"
+                        >
+                          <Send className="inline h-3.5 w-3.5 mr-1" />
+                          {row.data.expiryReminderEmailSentAt ? 'Resend Expiry' : 'Expiry Reminder'}
+                        </button>
+                      </span>
+                    )}
+                    {module.slug === 'cheques' && row.data.email && !['Deposited', 'Paid By Bank Transfer', 'Paid By Cash', 'Returned'].includes(row.status) && isReminderDue(row.data.chequeDate, 20) && (
+                      <span className="mr-2 inline-flex flex-col items-end">
+                        <button
+                          onClick={() => setConfirmReminder({ url: `/api/cheques/${row.id}/deposit-notice`, key: `${row.id}-notice`, title: 'Send Deposit Notice', description: `Send the 20-day deposit notice email for this cheque (${row.title})?` })}
+                          disabled={sendingEmail[`${row.id}-notice`]}
+                          title={row.data.depositNoticeEmailSentAt ? 'Resend Deposit Notice' : 'Send Deposit Notice'}
+                          className="rounded-lg px-2 py-1 text-xs font-semibold text-amber-600 hover:bg-amber-50 disabled:cursor-not-allowed disabled:opacity-40"
+                        >
+                          <Send className="inline h-3.5 w-3.5 mr-1" />
+                          {row.data.depositNoticeEmailSentAt ? 'Resend Notice' : 'Send Notice'}
+                        </button>
+                      </span>
+                    )}
+                    {module.slug === 'cheques' && row.data.email && !['Deposited', 'Paid By Bank Transfer', 'Paid By Cash', 'Returned'].includes(row.status) && isReminderDue(row.data.chequeDate, 5) && (
+                      <span className="mr-2 inline-flex flex-col items-end">
+                        <button
+                          onClick={() => setConfirmReminder({ url: `/api/cheques/${row.id}/deposit-reminder`, key: `${row.id}-reminder`, title: 'Send Deposit Reminder', description: `Send the 5-day deposit reminder email for this cheque (${row.title})?` })}
+                          disabled={sendingEmail[`${row.id}-reminder`]}
+                          title={row.data.depositReminderEmailSentAt ? 'Resend Deposit Reminder' : 'Send Deposit Reminder'}
+                          className="rounded-lg px-2 py-1 text-xs font-semibold text-red-500 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-40"
+                        >
+                          <Send className="inline h-3.5 w-3.5 mr-1" />
+                          {row.data.depositReminderEmailSentAt ? 'Resend Reminder' : 'Send Reminder'}
+                        </button>
+                      </span>
+                    )}
                     {module.slug === 'cheques' && (
                       <span className="mr-2 inline-flex max-w-[220px] flex-col items-end whitespace-normal">
                         <span className="flex flex-wrap justify-end gap-1.5">
@@ -805,6 +869,44 @@ export function ModulePage({ slug }: { slug: string }) {
                 {transferring[confirmTransferRow.id]
                   ? <><Spinner size="sm" color="white" /><span>Transferring…</span></>
                   : <><Send className="h-4 w-4" /><span>Transfer to Quote</span></>
+                }
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Reminder email confirmation modal (contract renewal/expiry, cheque deposit notice/reminder) */}
+      {confirmReminder && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => { if (!sendingEmail[confirmReminder.key]) setConfirmReminder(null); }} />
+          <div className="relative w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 shadow-xl">
+            <div className="mb-1 flex h-11 w-11 items-center justify-center rounded-2xl bg-blue-50">
+              <Send className="h-5 w-5 text-blue-600" />
+            </div>
+            <h2 className="mt-3 text-lg font-bold">{confirmReminder.title}</h2>
+            <p className="mt-1.5 text-sm text-slate-500">{confirmReminder.description}</p>
+            {emailSendError[confirmReminder.key] && (
+              <p className="mt-3 rounded-xl bg-red-50 px-3 py-2 text-sm font-medium text-red-600">{emailSendError[confirmReminder.key]}</p>
+            )}
+            <div className="mt-5 flex flex-col gap-2 sm:flex-row sm:justify-end">
+              <button
+                type="button"
+                onClick={() => setConfirmReminder(null)}
+                disabled={sendingEmail[confirmReminder.key]}
+                className="btn-secondary w-full sm:w-auto"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={sendConfirmedReminder}
+                disabled={sendingEmail[confirmReminder.key]}
+                className="btn-primary flex w-full items-center justify-center gap-2 sm:w-auto sm:min-w-[140px]"
+              >
+                {sendingEmail[confirmReminder.key]
+                  ? <><Spinner size="sm" color="white" /><span>Sending…</span></>
+                  : <><Send className="h-4 w-4" /><span>Send Email</span></>
                 }
               </button>
             </div>
