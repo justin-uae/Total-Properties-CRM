@@ -11,14 +11,14 @@ export async function stampSignatureOnPdf(pdfBytes: Buffer, opts: { name: string
   const pngImage = await doc.embedPng(Buffer.from(match[1], 'base64'));
 
   const margin = 24;
-  const maxImgWidth = 150;
+  const maxImgWidth = 210;
   const scale = Math.min(1, maxImgWidth / pngImage.width);
   const imgWidth = pngImage.width * scale;
   const imgHeight = pngImage.height * scale;
-  const fontSize = 12;
+  const fontSize = 8;
   const textBottom = 10;
   const blue = rgb(0.09, 0.35, 0.85);
-  const label = `Signed by ${opts.name} on ${fmtDate(opts.signedAt)}`;
+  const label = `${opts.name} — ${fmtDate(opts.signedAt)}`;
 
   for (const page of doc.getPages()) {
     const { width } = page.getSize();

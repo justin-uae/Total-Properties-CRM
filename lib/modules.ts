@@ -472,6 +472,7 @@ export const modules: ModuleConfig[] = [
       { name: 'handedOverBy', label: 'Handed Over By', type: 'text', required: true },
       { name: 'handedOverByMobile', label: 'Mobile Number of Person Handing Over Cheque', type: 'tel' },
       { name: 'bankName', label: 'Bank Name (on Cheque)', type: 'text', required: true },
+      { name: 'chequeAccountName', label: 'Cheque Account Name', type: 'text' },
       { name: 'chequeReceipt', label: 'Cheque Receipt', type: 'file', newRow: true },
       { name: 'scannedCheque', label: 'Scanned Cheque', type: 'file' },
       { name: 'notes', label: 'Notes', type: 'textarea', colSpan: 2 }

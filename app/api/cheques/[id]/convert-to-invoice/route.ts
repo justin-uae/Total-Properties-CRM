@@ -15,7 +15,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   const cheque = await prisma.record.findUnique({ where: { id } });
   if (!cheque || cheque.module !== 'cheques') return NextResponse.json({ message: 'Cheque not found' }, { status: 404 });
   const data = cheque.data as any;
-  if (data.deferralStatus !== 'Approved') return NextResponse.json({ message: 'The deferral request must be approved before converting to an invoice' }, { status: 400 });
+  if (data.deferralStatus !== 'Requested') return NextResponse.json({ message: 'This cheque has no pending deferral request to invoice' }, { status: 400 });
   if (data.deferralInvoiceId) return NextResponse.json({ message: 'An invoice has already been created for this deferral' }, { status: 400 });
   if (!data.email) return NextResponse.json({ message: 'This cheque has no recipient email on file' }, { status: 400 });
 

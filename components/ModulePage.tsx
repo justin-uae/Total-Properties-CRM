@@ -678,12 +678,34 @@ export function ModulePage({ slug }: { slug: string }) {
                     {module.slug === 'cheques' && (
                       <span className="mr-2 inline-flex max-w-[220px] flex-col items-end whitespace-normal">
                         <span className="flex flex-wrap justify-end gap-1.5">
-                          {row.data.deferralStatus === 'Requested' && (
+                          {row.data.deferralStatus === 'Requested' && !row.data.deferralInvoiceId && (
+                            <button
+                              onClick={() => convertChequeToInvoice(row)}
+                              disabled={chequeActionLoading[row.id]}
+                              title="Create Deferral Fee Invoice"
+                              className="rounded-lg px-2 py-1 text-xs font-semibold text-blue-600 hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-40"
+                            >
+                              <FileText className="inline h-3.5 w-3.5 mr-1" />
+                              {chequeActionLoading[row.id] ? 'Creating…' : 'Create Invoice'}
+                            </button>
+                          )}
+                          {row.data.deferralInvoiceId && (
+                            <button
+                              onClick={() => sendInvoiceEmailFor(row.data.deferralInvoiceId, row.id)}
+                              disabled={sendingEmail[row.id]}
+                              title="Resend Deferral Fee Invoice"
+                              className="rounded-lg px-2 py-1 text-xs font-semibold text-blue-600 hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-40"
+                            >
+                              <Send className="inline h-3.5 w-3.5 mr-1" />
+                              {sendingEmail[row.id] ? 'Sending…' : 'Resend Invoice'}
+                            </button>
+                          )}
+                          {row.data.deferralInvoiceId && row.data.deferralStatus === 'Requested' && (
                             <>
                               <button
                                 onClick={() => setChequeDeferralDecision(row, 'Approved')}
                                 disabled={chequeActionLoading[row.id]}
-                                title="Approve Deferral Request"
+                                title="Approve Deferral Request (payment received)"
                                 className="rounded-lg px-2 py-1 text-xs font-semibold text-green-600 hover:bg-green-50 disabled:cursor-not-allowed disabled:opacity-40"
                               >
                                 <Check className="inline h-3.5 w-3.5 mr-1" />Approve
@@ -697,28 +719,6 @@ export function ModulePage({ slug }: { slug: string }) {
                                 <XIcon className="inline h-3.5 w-3.5 mr-1" />Reject
                               </button>
                             </>
-                          )}
-                          {row.data.deferralStatus === 'Approved' && !row.data.deferralInvoiceId && (
-                            <button
-                              onClick={() => convertChequeToInvoice(row)}
-                              disabled={chequeActionLoading[row.id]}
-                              title="Convert Deferral Fee to Invoice"
-                              className="rounded-lg px-2 py-1 text-xs font-semibold text-blue-600 hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-40"
-                            >
-                              <FileText className="inline h-3.5 w-3.5 mr-1" />
-                              {chequeActionLoading[row.id] ? 'Converting…' : 'Convert to Invoice'}
-                            </button>
-                          )}
-                          {row.data.deferralInvoiceId && (
-                            <button
-                              onClick={() => sendInvoiceEmailFor(row.data.deferralInvoiceId, row.id)}
-                              disabled={sendingEmail[row.id]}
-                              title="Resend Deferral Fee Invoice"
-                              className="rounded-lg px-2 py-1 text-xs font-semibold text-blue-600 hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-40"
-                            >
-                              <Send className="inline h-3.5 w-3.5 mr-1" />
-                              {sendingEmail[row.id] ? 'Sending…' : 'Resend Invoice'}
-                            </button>
                           )}
                         </span>
                         {chequeActionError[row.id] && <span className="mt-0.5 text-[11px] font-medium text-red-600">{chequeActionError[row.id]}</span>}
