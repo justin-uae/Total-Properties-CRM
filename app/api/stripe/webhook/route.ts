@@ -43,10 +43,14 @@ export async function POST(req: NextRequest) {
             status: 'Received',
             data: {
               clientName: (data as any)?.clientName || '',
+              email: (data as any)?.email || '',
+              invoiceId,
               invoiceNumber: (data as any)?.invoiceNumber || '',
               amount: Number(session.amount_total || 0) / 100,
               method: 'Stripe',
+              depositTo: 'Stripe',
               reference: session.id,
+              paymentDate: new Date().toISOString().slice(0, 10),
               paidAt: new Date().toISOString()
             }
           }

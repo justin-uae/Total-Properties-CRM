@@ -38,7 +38,7 @@ function fromBookingValues(booking: RecordRow): InvoiceFormValues {
   const d = booking.data;
   const hours = Math.round((durationMinutes(d.startTime, d.endTime) / 60) * 100) / 100;
   return {
-    invoiceNumber: `INV-${Date.now()}`,
+    invoiceNumber: '',
     clientName: d.customerName || '',
     email: d.email || '',
     issueDate: todayIso(),
@@ -61,7 +61,7 @@ function fromBookingValues(booking: RecordRow): InvoiceFormValues {
 function fromQuoteValues(quote: RecordRow): InvoiceFormValues {
   const d = quote.data;
   return {
-    invoiceNumber: `INV-${Date.now()}`,
+    invoiceNumber: '',
     clientName: d.clientName || '',
     email: d.email || '',
     issueDate: todayIso(),
@@ -111,7 +111,7 @@ export function InvoiceForm({
     if (fromBooking) return fromBookingValues(fromBooking);
     if (fromQuote) return fromQuoteValues(fromQuote);
     return {
-      invoiceNumber: `INV-${Date.now()}`,
+      invoiceNumber: '',
       clientName: '',
       email: '',
       issueDate: todayIso(),
@@ -301,7 +301,7 @@ export function InvoiceForm({
               </div>
               <div className="text-right">
                 <p className="text-2xl font-black">INVOICE</p>
-                <p className="text-sm text-slate-500"># {values.invoiceNumber}</p>
+                <p className="text-sm text-slate-500"># {values.invoiceNumber || 'Auto-generated on save'}</p>
               </div>
             </div>
 
@@ -393,7 +393,7 @@ export function InvoiceForm({
       <div className="grid gap-4 md:grid-cols-2">
         {field('Client / Company Name', <Combobox value={values.clientName} onChange={pickClient} options={clientOptions} placeholder="Select or type a client name" required />)}
         {field('Client Email', <input className="input" type="email" value={values.email} onChange={(e) => setValues((v) => ({ ...v, email: e.target.value }))} />)}
-        {field('Invoice Number', <input className="input bg-slate-50" value={values.invoiceNumber} readOnly />)}
+        {field('Invoice Number', <input className="input bg-slate-50" value={values.invoiceNumber || 'Auto-generated on save'} readOnly />)}
         {field('Date', <input className="input" type="date" value={values.issueDate} onChange={(e) => setValues((v) => ({ ...v, issueDate: e.target.value }))} />)}
         {field('Subject', <input className="input" placeholder="e.g. Meeting Room Booking" value={values.subject} onChange={(e) => setValues((v) => ({ ...v, subject: e.target.value }))} />)}
         {field('Due Date', <input className="input" type="date" value={values.dueDate} onChange={(e) => setValues((v) => ({ ...v, dueDate: e.target.value }))} />)}

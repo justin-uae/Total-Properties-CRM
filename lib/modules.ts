@@ -122,7 +122,7 @@ export const modules: ModuleConfig[] = [
     icon: Users,
     defaultStatus: 'New',
     statuses: ['New', 'Contacted', 'Viewing Booked', 'Quotation Sent', 'Negotiation', 'Won', 'Lost', 'Transferred to Quotation'],
-    tableFields: ['fullName', 'telephone', 'serviceType', 'source', 'nextFollowUp', 'status'],
+    tableFields: ['telephone', 'serviceType', 'source', 'nextFollowUp', 'status'],
     fields: [
       { name: 'fullName', label: 'Full Name', type: 'text', required: true },
       { name: 'companyName', label: 'Company Name', type: 'text' },
@@ -147,7 +147,7 @@ export const modules: ModuleConfig[] = [
     icon: ClipboardSignature,
     defaultStatus: 'Draft',
     statuses: ['Draft', 'Sent', 'Viewed', 'Accepted', 'Rejected', 'Expired'],
-    tableFields: ['quoteNumber', 'clientName', 'serviceType', 'amount', 'validUntil', 'status'],
+    tableFields: ['quoteNumber', 'serviceType', 'amount', 'validUntil', 'status'],
     fields: [
       { name: 'quoteNumber', label: 'Quote Number', type: 'text', required: true },
       { name: 'clientName', label: 'Client / Company', type: 'select', optionsSource: 'clients', optionsValueField: 'companyName', required: true },
@@ -374,7 +374,7 @@ export const modules: ModuleConfig[] = [
     icon: Users,
     defaultStatus: 'Active',
     statuses: ['Prospect', 'Active', 'On Hold', 'Leaving', 'Former'],
-    tableFields: ['companyName', 'contactName', 'telephone', 'email', 'status'],
+    tableFields: ['contactName', 'telephone', 'email', 'status'],
     fields: [
       { name: 'companyName', label: 'Company Name', type: 'text', required: true },
       { name: 'contactName', label: 'Contact Name', type: 'text', required: true },
@@ -397,7 +397,7 @@ export const modules: ModuleConfig[] = [
     icon: FileText,
     defaultStatus: 'Draft',
     statuses: ['Draft', 'Sent', 'Signed By Client', 'Signed By Company', 'Active', 'Expired', 'Cancelled'],
-    tableFields: ['contractNumber', 'clientName', 'startDate', 'endDate', 'status'],
+    tableFields: ['contractNumber', 'startDate', 'endDate', 'status'],
     fields: [
       { name: 'clientName', label: 'Client / Company', type: 'select', optionsSource: 'clients', optionsValueField: 'companyName', required: true, autofill: { targetField: 'email', sourceDataField: 'email' } },
       { name: 'email', label: 'Recipient Email', type: 'email' },
@@ -462,7 +462,7 @@ export const modules: ModuleConfig[] = [
     icon: Banknote,
     defaultStatus: 'Received',
     statuses: ['Received', 'Cheque Deferred/Hold', 'Deposited', 'Paid By Bank Transfer', 'Paid By Cash', 'Returned'],
-    tableFields: ['clientName', 'amount', 'chequeDate', 'deferralStatus', 'status'],
+    tableFields: ['amount', 'chequeDate', 'deferralStatus', 'status'],
     fields: [
       { name: 'clientName', label: 'Company Name', type: 'select', optionsSource: 'clients', optionsValueField: 'companyName', required: true, autofill: { targetField: 'email', sourceDataField: 'email' } },
       { name: 'email', label: 'Recipient Email (for deposit reminder)', type: 'email' },
@@ -519,9 +519,8 @@ export const modules: ModuleConfig[] = [
     icon: Receipt,
     defaultStatus: 'Draft',
     statuses: ['Draft', 'Sent', 'Viewed', 'Part Paid', 'Paid', 'Overdue', 'Cancelled'],
-    tableFields: ['invoiceNumber', 'clientName', 'amount', 'dueDate', 'status'],
+    tableFields: ['invoiceNumber', 'amount', 'dueDate', 'status'],
     fields: [
-      { name: 'invoiceNumber', label: 'Invoice Number', type: 'text', required: true },
       { name: 'clientName', label: 'Client / Company', type: 'text', required: true },
       { name: 'email', label: 'Customer Email', type: 'email' },
       { name: 'description', label: 'Description', type: 'textarea', colSpan: 2 },
@@ -540,15 +539,19 @@ export const modules: ModuleConfig[] = [
     icon: CreditCard,
     defaultStatus: 'Received',
     statuses: ['Received', 'Pending', 'Failed', 'Refunded'],
-    tableFields: ['clientName', 'invoiceNumber', 'amount', 'method', 'status'],
+    tableFields: ['invoiceNumber', 'amount', 'paymentDate', 'method', 'status'],
     fields: [
       { name: 'clientName', label: 'Client / Company', type: 'text', required: true },
       { name: 'invoiceNumber', label: 'Invoice Number', type: 'text' },
-      { name: 'amount', label: 'Amount', type: 'money', required: true },
-      { name: 'method', label: 'Payment Method', type: 'select', options: ['Stripe', 'Bank Transfer', 'Cash', 'Card Terminal', 'Cheque'] },
-      { name: 'reference', label: 'Reference', type: 'text' },
-      { name: 'paidAt', label: 'Paid At', type: 'datetime' },
-      { name: 'notes', label: 'Notes', type: 'textarea', colSpan: 2 }
+      { name: 'amount', label: 'Amount Received (AED)', type: 'money', required: true },
+      { name: 'bankCharges', label: 'Bank Charges (if any)', type: 'money' },
+      { name: 'paymentDate', label: 'Payment Date', type: 'date', required: true },
+      { name: 'method', label: 'Payment Mode', type: 'select', options: ['Cash', 'Bank Transfer', 'Card Terminal', 'Cheque', 'Stripe'] },
+      { name: 'paymentReceivedOn', label: 'Payment Received On', type: 'date' },
+      { name: 'depositTo', label: 'Deposit To', type: 'select', options: ['Petty Cash', 'Bank Account', 'Cash Drawer', 'Stripe'], required: true },
+      { name: 'reference', label: 'Reference#', type: 'text' },
+      { name: 'notes', label: 'Notes', type: 'textarea', colSpan: 2 },
+      { name: 'attachments', label: 'Attachments', type: 'file-multi', colSpan: 2 }
     ]
   },
   {

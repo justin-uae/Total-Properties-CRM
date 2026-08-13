@@ -8,7 +8,8 @@ import { ImageLightbox } from '@/components/ui/ImageLightbox';
 import { InvoiceForm } from '@/components/InvoiceForm';
 import { QuotationForm } from '@/components/QuotationForm';
 import { MaintenanceDetail } from '@/components/MaintenanceDetail';
-import { Check, Download, Eye, EyeOff, FileText, Plus, RefreshCw, Send, Trash2, Upload, X as XIcon } from 'lucide-react';
+import { RecordPaymentModal } from '@/components/RecordPaymentModal';
+import { AlertTriangle, Bell, Check, CreditCard, Download, Eye, EyeOff, FileText, Plus, RefreshCw, Send, Trash2, Upload, X as XIcon } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 
 function WhatsAppIcon({ className }: { className?: string }) {
@@ -105,6 +106,7 @@ export function ModulePage({ slug }: { slug: string }) {
   const [transferError, setTransferError] = useState('');
   const [invoiceFromBookingRow, setInvoiceFromBookingRow] = useState<RecordRow | null>(null);
   const [invoiceFromQuoteRow, setInvoiceFromQuoteRow] = useState<RecordRow | null>(null);
+  const [recordPaymentRow, setRecordPaymentRow] = useState<RecordRow | null>(null);
   const [sendingEmail, setSendingEmail] = useState<Record<string, boolean>>({});
   const [emailSendError, setEmailSendError] = useState<Record<string, string>>({});
   const [chequeActionLoading, setChequeActionLoading] = useState<Record<string, boolean>>({});
@@ -600,7 +602,7 @@ export function ModulePage({ slug }: { slug: string }) {
             <tbody className="divide-y divide-slate-100">
               {loading ? <TableSkeleton cols={module.tableFields.length} /> : filtered.map((row) => (
                 <tr key={row.id} className="hover:bg-slate-50/70">
-                  <td className="px-5 py-4 whitespace-nowrap font-semibold">{row.title}<p className="text-xs font-normal text-slate-400">{fmtDate(row.createdAt)}</p></td>
+                  <td className={`px-5 py-4 font-semibold ${module.slug === 'payments' ? 'max-w-[200px] whitespace-normal break-words' : 'whitespace-nowrap'}`}>{row.title}<p className="text-xs font-normal text-slate-400">{fmtDate(row.createdAt)}</p></td>
                   {module.tableFields.map((field) => (
                     <td key={field} className="px-5 py-4 whitespace-nowrap">
                       {field === 'status' ? <span className="status-pill bg-orange-50 text-orange-700">{row.status}</span> : valueFor(row, field)}
@@ -659,6 +661,44 @@ export function ModulePage({ slug }: { slug: string }) {
                         {emailSendError[row.id] && <span className="mt-0.5 text-[11px] font-medium text-red-600">{emailSendError[row.id]}</span>}
                       </span>
                     )}
+                    {module.slug === 'invoices' && !['Paid', 'Cancelled'].includes(row.status) && (
+                      <button
+                        onClick={() => setRecordPaymentRow(row)}
+                        title={row.status === 'Part Paid' ? `Record Payment — balance due ${currency(Math.max(Number(row.data.total ?? row.data.amount ?? 0) - Number(row.data.amountPaid ?? 0), 0))}` : 'Record Payment'}
+                        className="mr-2 rounded-lg px-2 py-1 text-xs font-semibold text-green-600 hover:bg-green-50"
+                      >
+                        <CreditCard className="inline h-3.5 w-3.5 mr-1" />
+                        {row.status === 'Part Paid' ? 'Record Balance' : 'Record Payment'}
+                      </button>
+                    )}
+                    {module.slug === 'payments' && (
+                      <span className="mr-1 inline-flex flex-col items-end">
+                        <span className="flex flex-wrap justify-end gap-1">
+                          <a
+                            href={`/api/payments/${row.id}/receipt`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            title="Download Receipt PDF"
+                            className="flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-semibold text-blue-600 hover:bg-blue-50"
+                          >
+                            <Download className="h-3.5 w-3.5" />
+                            PDF
+                          </a>
+                          {row.data.email && (
+                            <button
+                              onClick={() => setConfirmReminder({ url: `/api/payments/${row.id}/receipt-email`, key: row.id, title: row.data.receiptEmailSentAt ? 'Resend Receipt Email' : 'Send Receipt Email', description: `Send the payment receipt email for ${row.title}?` })}
+                              disabled={sendingEmail[row.id]}
+                              title={row.data.receiptEmailSentAt ? 'Resend Receipt Email' : 'Send Receipt Email'}
+                              className="flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-semibold text-green-600 hover:bg-green-50 disabled:cursor-not-allowed disabled:opacity-40"
+                            >
+                              {sendingEmail[row.id] ? <Spinner size="sm" color="muted" /> : <Send className="h-3.5 w-3.5" />}
+                              {row.data.receiptEmailSentAt ? 'Resend' : 'Email'}
+                            </button>
+                          )}
+                        </span>
+                        {emailSendError[row.id] && <span className="mt-0.5 max-w-[140px] whitespace-normal text-right text-[11px] font-medium text-red-600">{emailSendError[row.id]}</span>}
+                      </span>
+                    )}
                     {module.slug === 'quotations' && row.data.email && (
                       <span className="mr-2 inline-flex flex-col items-end">
                         <button
@@ -688,56 +728,44 @@ export function ModulePage({ slug }: { slug: string }) {
                       </span>
                     )}
                     {module.slug === 'contracts' && row.data.email && !['Expired', 'Cancelled'].includes(row.status) && isReminderDue(row.data.renewalReminderAt, 0) && (
-                      <span className="mr-2 inline-flex flex-col items-end">
-                        <button
-                          onClick={() => setConfirmReminder({ url: `/api/contracts/${row.id}/renewal-reminder`, key: `${row.id}-renewal`, title: 'Send Renewal Reminder', description: `Send the renewal reminder email for ${row.title}?` })}
-                          disabled={sendingEmail[`${row.id}-renewal`]}
-                          title={row.data.renewalReminderEmailSentAt ? 'Resend Renewal Reminder' : 'Send Renewal Reminder'}
-                          className="rounded-lg px-2 py-1 text-xs font-semibold text-amber-600 hover:bg-amber-50 disabled:cursor-not-allowed disabled:opacity-40"
-                        >
-                          <Send className="inline h-3.5 w-3.5 mr-1" />
-                          {row.data.renewalReminderEmailSentAt ? 'Resend Renewal' : 'Renewal Reminder'}
-                        </button>
-                      </span>
+                      <button
+                        onClick={() => setConfirmReminder({ url: `/api/contracts/${row.id}/renewal-reminder`, key: `${row.id}-renewal`, title: 'Send Renewal Reminder', description: `Send the renewal reminder email for ${row.title}?` })}
+                        disabled={sendingEmail[`${row.id}-renewal`]}
+                        title={row.data.renewalReminderEmailSentAt ? 'Resend Renewal Reminder' : 'Send Renewal Reminder'}
+                        className="mr-1 rounded-lg p-2 text-amber-600 hover:bg-amber-50 disabled:cursor-not-allowed disabled:opacity-40"
+                      >
+                        {sendingEmail[`${row.id}-renewal`] ? <Spinner size="sm" color="muted" /> : <Bell className="h-4 w-4" />}
+                      </button>
                     )}
                     {module.slug === 'contracts' && row.data.email && !['Expired', 'Cancelled'].includes(row.status) && isReminderDue(row.data.expiryReminderAt, 0) && (
-                      <span className="mr-2 inline-flex flex-col items-end">
-                        <button
-                          onClick={() => setConfirmReminder({ url: `/api/contracts/${row.id}/expiry-reminder`, key: `${row.id}-expiry`, title: 'Send Expiry Reminder', description: `Send the expiry reminder email for ${row.title}?` })}
-                          disabled={sendingEmail[`${row.id}-expiry`]}
-                          title={row.data.expiryReminderEmailSentAt ? 'Resend Expiry Reminder' : 'Send Expiry Reminder'}
-                          className="rounded-lg px-2 py-1 text-xs font-semibold text-red-500 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-40"
-                        >
-                          <Send className="inline h-3.5 w-3.5 mr-1" />
-                          {row.data.expiryReminderEmailSentAt ? 'Resend Expiry' : 'Expiry Reminder'}
-                        </button>
-                      </span>
+                      <button
+                        onClick={() => setConfirmReminder({ url: `/api/contracts/${row.id}/expiry-reminder`, key: `${row.id}-expiry`, title: 'Send Expiry Reminder', description: `Send the expiry reminder email for ${row.title}?` })}
+                        disabled={sendingEmail[`${row.id}-expiry`]}
+                        title={row.data.expiryReminderEmailSentAt ? 'Resend Expiry Reminder' : 'Send Expiry Reminder'}
+                        className="mr-1 rounded-lg p-2 text-red-500 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-40"
+                      >
+                        {sendingEmail[`${row.id}-expiry`] ? <Spinner size="sm" color="muted" /> : <AlertTriangle className="h-4 w-4" />}
+                      </button>
                     )}
                     {module.slug === 'cheques' && row.data.email && !['Deposited', 'Paid By Bank Transfer', 'Paid By Cash', 'Returned'].includes(row.status) && isReminderDue(row.data.chequeDate, 20) && (
-                      <span className="mr-2 inline-flex flex-col items-end">
-                        <button
-                          onClick={() => setConfirmReminder({ url: `/api/cheques/${row.id}/deposit-notice`, key: `${row.id}-notice`, title: 'Send Deposit Notice', description: `Send the 20-day deposit notice email for this cheque (${row.title})?` })}
-                          disabled={sendingEmail[`${row.id}-notice`]}
-                          title={row.data.depositNoticeEmailSentAt ? 'Resend Deposit Notice' : 'Send Deposit Notice'}
-                          className="rounded-lg px-2 py-1 text-xs font-semibold text-amber-600 hover:bg-amber-50 disabled:cursor-not-allowed disabled:opacity-40"
-                        >
-                          <Send className="inline h-3.5 w-3.5 mr-1" />
-                          {row.data.depositNoticeEmailSentAt ? 'Resend Notice' : 'Send Notice'}
-                        </button>
-                      </span>
+                      <button
+                        onClick={() => setConfirmReminder({ url: `/api/cheques/${row.id}/deposit-notice`, key: `${row.id}-notice`, title: 'Send Deposit Notice', description: `Send the 20-day deposit notice email for this cheque (${row.title})?` })}
+                        disabled={sendingEmail[`${row.id}-notice`]}
+                        title={row.data.depositNoticeEmailSentAt ? 'Resend Deposit Notice' : 'Send Deposit Notice'}
+                        className="mr-1 rounded-lg p-2 text-amber-600 hover:bg-amber-50 disabled:cursor-not-allowed disabled:opacity-40"
+                      >
+                        {sendingEmail[`${row.id}-notice`] ? <Spinner size="sm" color="muted" /> : <Bell className="h-4 w-4" />}
+                      </button>
                     )}
                     {module.slug === 'cheques' && row.data.email && !['Deposited', 'Paid By Bank Transfer', 'Paid By Cash', 'Returned'].includes(row.status) && isReminderDue(row.data.chequeDate, 5) && (
-                      <span className="mr-2 inline-flex flex-col items-end">
-                        <button
-                          onClick={() => setConfirmReminder({ url: `/api/cheques/${row.id}/deposit-reminder`, key: `${row.id}-reminder`, title: 'Send Deposit Reminder', description: `Send the 5-day deposit reminder email for this cheque (${row.title})?` })}
-                          disabled={sendingEmail[`${row.id}-reminder`]}
-                          title={row.data.depositReminderEmailSentAt ? 'Resend Deposit Reminder' : 'Send Deposit Reminder'}
-                          className="rounded-lg px-2 py-1 text-xs font-semibold text-red-500 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-40"
-                        >
-                          <Send className="inline h-3.5 w-3.5 mr-1" />
-                          {row.data.depositReminderEmailSentAt ? 'Resend Reminder' : 'Send Reminder'}
-                        </button>
-                      </span>
+                      <button
+                        onClick={() => setConfirmReminder({ url: `/api/cheques/${row.id}/deposit-reminder`, key: `${row.id}-reminder`, title: 'Send Deposit Reminder', description: `Send the 5-day deposit reminder email for this cheque (${row.title})?` })}
+                        disabled={sendingEmail[`${row.id}-reminder`]}
+                        title={row.data.depositReminderEmailSentAt ? 'Resend Deposit Reminder' : 'Send Deposit Reminder'}
+                        className="mr-1 rounded-lg p-2 text-red-500 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-40"
+                      >
+                        {sendingEmail[`${row.id}-reminder`] ? <Spinner size="sm" color="muted" /> : <AlertTriangle className="h-4 w-4" />}
+                      </button>
                     )}
                     {module.slug === 'cheques' && (
                       <span className="mr-2 inline-flex max-w-[220px] flex-col items-end whitespace-normal">
@@ -930,6 +958,14 @@ export function ModulePage({ slug }: { slug: string }) {
           fromQuote={invoiceFromQuoteRow}
           modal
           onClose={() => setInvoiceFromQuoteRow(null)}
+          onSaved={load}
+        />
+      )}
+
+      {recordPaymentRow && (
+        <RecordPaymentModal
+          invoice={recordPaymentRow}
+          onClose={() => setRecordPaymentRow(null)}
           onSaved={load}
         />
       )}

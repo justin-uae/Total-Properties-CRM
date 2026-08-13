@@ -3,6 +3,8 @@ import { prisma } from '@/lib/db';
 import { getSettings } from '@/lib/settings';
 import { generateInvoicePdfBuffer } from '@/lib/invoicePdf';
 import { generateQuotationPdfBuffer } from '@/lib/quotationPdf';
+import { generatePaymentReceiptPdfBuffer } from '@/lib/receiptPdf';
+import { loadPaymentReceiptData } from '@/lib/receipts';
 import { createInvoicePaymentLink } from '@/lib/stripePaymentLink';
 import { isStripePayable } from '@/lib/invoice-calc';
 import { renderTemplate } from '@/lib/emailTemplates';
@@ -11,6 +13,25 @@ import { currency, fmtDate } from '@/lib/utils';
 import { downloadFile } from '@/lib/storage';
 
 const CRM_CC_RECIPIENTS = ['karen@totalproperty.ae', 'info@totalproperty.ae'];
+
+/** Appended to every outgoing transactional email so recipients always have a way to reach the team. */
+function emailFooterHtml() {
+  return `<div style="margin-top:24px;padding-top:16px;border-top:1px solid #e2e8f0;font-size:12px;color:#64748b">
+    <p style="margin:0 0 6px;font-weight:600;color:#334155">Should you require any assistance, please contact our Management Team through any of the following:</p>
+    <table style="font-size:12px"><tr>
+      <td style="padding:0 24px 0 0;vertical-align:top">
+        <p style="margin:0;font-weight:600;color:#334155">Email</p>
+        <p style="margin:2px 0 0">karen@totalproperty.ae</p>
+        <p style="margin:0">info@totalproperty.ae</p>
+      </td>
+      <td style="padding:0;vertical-align:top">
+        <p style="margin:0;font-weight:600;color:#334155">Mobile</p>
+        <p style="margin:2px 0 0">+971 58 502 0978</p>
+        <p style="margin:0">+971 58 504 2436</p>
+      </td>
+    </tr></table>
+  </div>`;
+}
 
 function bankDetailsHtml(bankDetails: Record<string, string> | undefined) {
   if (!bankDetails) return '';
@@ -92,7 +113,7 @@ export async function sendInvoiceEmail(invoiceId: string) {
   const bodyHtml = renderTemplate(String(template.bodyHtml || ''), tokens);
 
   const payHtml = paymentLinkUrl ? `<p><a href="${paymentLinkUrl}" style="display:inline-block;padding:10px 18px;background:${BRAND_ACCENT};color:#fff;border-radius:8px;text-decoration:none;font-weight:600">Pay Now</a></p>` : '';
-  const html = `${bodyHtml}${payHtml}${bankDetailsHtml(bankDetails)}`;
+  const html = `${bodyHtml}${payHtml}${bankDetailsHtml(bankDetails)}${emailFooterHtml()}`;
 
   await transporter.sendMail({
     from: process.env.SMTP_FROM || `${companyName} <noreply@example.com>`,
@@ -176,7 +197,7 @@ export async function sendQuotationEmail(quoteId: string) {
     to: data.email,
     cc: CRM_CC_RECIPIENTS,
     subject,
-    html: bodyHtml,
+    html: `${bodyHtml}${emailFooterHtml()}`,
     attachments
   });
 
@@ -237,7 +258,7 @@ export async function sendContractEmail(contractId: string) {
     to: data.email,
     cc: CRM_CC_RECIPIENTS,
     subject,
-    html: bodyHtml,
+    html: `${bodyHtml}${emailFooterHtml()}`,
     attachments
   });
 
@@ -279,7 +300,7 @@ async function sendContractLifecycleEmail(contractId: string, templateKey: 'cont
     to: data.email,
     cc: CRM_CC_RECIPIENTS,
     subject,
-    html: bodyHtml
+    html: `${bodyHtml}${emailFooterHtml()}`
   });
 
   await prisma.record.update({
@@ -331,7 +352,7 @@ async function sendChequeLifecycleEmail(chequeId: string, templateKey: 'chequeRe
     to: data.email,
     cc: CRM_CC_RECIPIENTS,
     subject,
-    html: bodyHtml
+    html: `${bodyHtml}${emailFooterHtml()}`
   });
 
   await prisma.record.update({
@@ -346,4 +367,52 @@ export async function sendChequeDepositReminderEmail(chequeId: string) {
 
 export async function sendChequeDepositNoticeEmail(chequeId: string) {
   return sendChequeLifecycleEmail(chequeId, 'chequeDepositNotice', 'depositNoticeEmailSentAt', 'Cheque Deposit Notice – Cheque Scheduled for {{chequeDate}} | {{clientName}}');
+}
+
+export async function sendPaymentReceiptEmail(paymentId: string) {
+  const { payment, receipt } = await loadPaymentReceiptData(paymentId);
+  const data = payment.data as any;
+  if (!data.email) throw new Error('Payment recipient email is missing');
+  if (!process.env.SMTP_HOST) throw new Error('SMTP is not configured');
+
+  const settings = await getSettings();
+  const companyName = String(settings.companyName || 'Our Company');
+
+  const transporter = nodemailer.createTransport({
+    host: process.env.SMTP_HOST,
+    port: Number(process.env.SMTP_PORT || 587),
+    secure: Number(process.env.SMTP_PORT || 587) === 465,
+    auth: process.env.SMTP_USER ? { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS } : undefined
+  });
+
+  const pdfBuffer = await generatePaymentReceiptPdfBuffer(receipt);
+  const attachments = [{ filename: `Receipt-${receipt.invoiceNumber || payment.id}.pdf`, content: pdfBuffer }];
+
+  const tokens = {
+    clientName: receipt.clientName || 'Customer',
+    companyName,
+    invoiceNumber: receipt.invoiceNumber || '',
+    amount: currency(receipt.amount)
+  };
+  const subject = renderTemplate('Payment Receipt for {{invoiceNumber}} — {{amount}} | {{companyName}}', tokens);
+  const bodyHtml = renderTemplate(
+    '<p>Dear {{clientName}},</p>' +
+      '<p>Thank you for your payment. Please find your payment receipt attached for your records.</p>' +
+      '<p>Warm regards,<br>{{companyName}}</p>',
+    tokens
+  );
+
+  await transporter.sendMail({
+    from: process.env.SMTP_FROM || `${companyName} <noreply@example.com>`,
+    to: data.email,
+    cc: CRM_CC_RECIPIENTS,
+    subject,
+    html: `${bodyHtml}${emailFooterHtml()}`,
+    attachments
+  });
+
+  await prisma.record.update({
+    where: { id: paymentId },
+    data: { data: { ...data, receiptEmailSentAt: new Date().toISOString() } }
+  });
 }

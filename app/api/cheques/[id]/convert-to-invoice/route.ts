@@ -6,6 +6,7 @@ import { sendInvoiceEmail } from '@/lib/mail';
 import { auditLog } from '@/lib/audit';
 import { ipFromHeaders, publicToken } from '@/lib/utils';
 import { CHEQUE_DEFERRAL_FEE } from '@/lib/cheques';
+import { generateInvoiceNumber } from '@/lib/invoices';
 
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -21,7 +22,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 
   const today = new Date().toISOString().slice(0, 10);
   const invoiceData = {
-    invoiceNumber: `INV-${Date.now()}`,
+    invoiceNumber: await generateInvoiceNumber(),
     clientName: data.clientName || '',
     email: data.email,
     description: `Cheque Deferred/Hold Fee — cheque dated ${data.chequeDate || ''}${data.bankName ? ` (${data.bankName})` : ''}`,
