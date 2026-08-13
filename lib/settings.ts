@@ -77,9 +77,6 @@ export const defaultSettings = {
         '<p>This is an automated reminder that your Lease Agreement expires today.</p>' +
         '<p>If you have already completed your renewal or have finalized the renewal process with our team, please disregard this email and thanks for your continued tenancy.</p>' +
         '<p>If you have not yet renewed your Lease Agreement, we kindly request that you contact our Management Team immediately to avoid any interruption to your tenancy and to discuss the next steps.</p>' +
-        '<p>You may reach us through any of the following:</p>' +
-        '<p><strong>Email:</strong><br>karen@totalproperty.ae<br>info@totalproperty.ae</p>' +
-        '<p><strong>Mobile:</strong><br>+971 58 502 0978<br>+971 58 504 2436</p>' +
         '<p>We encourage you to contact us as soon as possible so that we can assist you with your renewal or discuss your intentions regarding the tenancy. Prompt communication will help ensure a smooth process and avoid any unnecessary complications in accordance with the terms and conditions of your Lease Agreement.</p>' +
         '<p>If you have any questions or require assistance, please do not hesitate to get in touch. Our team will be pleased to assist you.</p>' +
         '<p>Thank you for choosing Total Property Solutions Real Estate LLC – OPC. We appreciate your continued trust and look forward to hearing from you.</p>' +
@@ -94,9 +91,7 @@ export const defaultSettings = {
         '<p>Kindly ensure that sufficient funds are available in your account before the cheque deposit date to avoid any inconvenience, returned cheque charges, or delays in your tenancy obligations.</p>' +
         '<p>If you wish to defer the cheque deposit, you are required to submit your cheque deferral request and settle the applicable cheque deferral fee at least three (3) days prior to the cheque date. Requests received after this period may not be accommodated due to bank processing timelines.</p>' +
         '<p>Please note that if we do not receive your cheque deferral request and the corresponding payment before the required deadline, your cheque will be deposited automatically on the scheduled cheque date ({{chequeDate}}).</p>' +
-        '<p>Should you require assistance or wish to arrange a cheque deferral, please contact our Management Team through any of the following:</p>' +
-        '<p><strong>Email:</strong><br>karen@totalproperty.ae<br>info@totalproperty.ae</p>' +
-        '<p><strong>Mobile:</strong><br>+971 58 502 0978<br>+971 58 504 2436</p>' +
+        '<p>Should you require assistance or wish to arrange a cheque deferral, please contact our Management Team.</p>' +
         '<p>If you have already coordinated this payment or submitted your cheque deferral request, kindly disregard this email.</p>' +
         '<p>Thank you for your cooperation and continued tenancy with Total Property Solutions Real Estate LLC – OPC.</p>' +
         '<p>Kind regards,<br>Total Property Solutions Real Estate LLC – OPC<br>Business Centre Management</p>'
@@ -110,9 +105,6 @@ export const defaultSettings = {
         '<p>Kindly ensure that sufficient funds are available in your account before the cheque deposit date to avoid any inconvenience, returned cheque charges, or delays in your tenancy obligations.</p>' +
         '<p>If you wish to defer or hold this cheque, you may submit a Cheque Deferred/Hold request through your Tenant Account. Requests can only be submitted between twenty (20) and fifteen (15) days before the cheque date, and a Cheque Deferred/Hold fee of AED 525 applies to all approved requests. Requests submitted outside this window cannot be accommodated due to bank processing timelines.</p>' +
         '<p><a href="{{link}}">{{link}}</a></p>' +
-        '<p>Should you require any assistance, please contact our Management Team through any of the following:</p>' +
-        '<p><strong>Email:</strong><br>karen@totalproperty.ae<br>info@totalproperty.ae</p>' +
-        '<p><strong>Mobile:</strong><br>+971 58 502 0978<br>+971 58 504 2436</p>' +
         '<p>Thank you for your cooperation and continued tenancy with Total Property Solutions Real Estate LLC – OPC.</p>' +
         '<p>Kind regards,<br>Total Property Solutions Real Estate LLC – OPC<br>Business Centre Management</p>'
     }
