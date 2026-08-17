@@ -385,6 +385,7 @@ export const modules: ModuleConfig[] = [
       { name: 'location', label: 'Location', type: 'text' },
       { name: 'vatRegistered', label: 'VAT Registration', type: 'select', options: vatStatuses },
       { name: 'trnNumber', label: 'Customer TRN (15-digit)', type: 'text', placeholder: 'Enter your customer\'s 15-digit TRN', showWhen: { field: 'vatRegistered', equals: 'VAT Registered' } },
+      { name: 'address', label: 'Address', type: 'textarea', colSpan: 2 },
       { name: 'notes', label: 'Notes', type: 'textarea', colSpan: 2 }
     ]
   },

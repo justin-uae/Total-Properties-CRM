@@ -14,6 +14,7 @@ type InvoiceFormValues = {
   invoiceNumber: string;
   clientName: string;
   email: string;
+  address: string;
   issueDate: string;
   dueDate: string;
   subject: string;
@@ -41,6 +42,7 @@ function fromBookingValues(booking: RecordRow): InvoiceFormValues {
     invoiceNumber: '',
     clientName: d.customerName || '',
     email: d.email || '',
+    address: '',
     issueDate: todayIso(),
     dueDate: daysFromNowIso(7),
     subject: `Meeting Room Booking - ${d.roomName || ''}`.trim(),
@@ -64,6 +66,7 @@ function fromQuoteValues(quote: RecordRow): InvoiceFormValues {
     invoiceNumber: '',
     clientName: d.clientName || '',
     email: d.email || '',
+    address: d.address || '',
     issueDate: todayIso(),
     dueDate: daysFromNowIso(7),
     subject: d.subject || '',
@@ -98,6 +101,7 @@ export function InvoiceForm({
         invoiceNumber: existing.data.invoiceNumber || `INV-${Date.now()}`,
         clientName: existing.data.clientName || '',
         email: existing.data.email || '',
+        address: existing.data.address || '',
         issueDate: existing.data.issueDate || todayIso(),
         dueDate: existing.data.dueDate || daysFromNowIso(7),
         subject: existing.data.subject || '',
@@ -114,6 +118,7 @@ export function InvoiceForm({
       invoiceNumber: '',
       clientName: '',
       email: '',
+      address: '',
       issueDate: todayIso(),
       dueDate: daysFromNowIso(7),
       subject: '',
@@ -158,6 +163,7 @@ export function InvoiceForm({
       ...v,
       clientName: name,
       email: match?.data.email || v.email,
+      address: match?.data.address || v.address,
       vatRegistered: match?.data.vatRegistered || '',
       trnNumber: match?.data.vatRegistered === 'VAT Registered' ? match?.data.trnNumber || '' : ''
     }));
@@ -168,6 +174,7 @@ export function InvoiceForm({
       invoiceNumber: values.invoiceNumber,
       clientName: values.clientName,
       email: values.email,
+      address: values.address,
       issueDate: values.issueDate,
       dueDate: values.dueDate,
       subject: values.subject,
@@ -397,6 +404,9 @@ export function InvoiceForm({
         {field('Date', <input className="input" type="date" value={values.issueDate} onChange={(e) => setValues((v) => ({ ...v, issueDate: e.target.value }))} />)}
         {field('Subject', <input className="input" placeholder="e.g. Meeting Room Booking" value={values.subject} onChange={(e) => setValues((v) => ({ ...v, subject: e.target.value }))} />)}
         {field('Due Date', <input className="input" type="date" value={values.dueDate} onChange={(e) => setValues((v) => ({ ...v, dueDate: e.target.value }))} />)}
+        <div className="md:col-span-2">
+          {field('Address', <textarea className="input min-h-20" value={values.address} onChange={(e) => setValues((v) => ({ ...v, address: e.target.value }))} />)}
+        </div>
         {field('VAT Registration', (
           <select className="input" value={values.vatRegistered} onChange={(e) => setValues((v) => ({ ...v, vatRegistered: e.target.value, trnNumber: e.target.value === 'VAT Registered' ? v.trnNumber : '' }))}>
             <option value="">Select...</option>

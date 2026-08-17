@@ -7,6 +7,7 @@ type InvoicePdfData = {
   invoiceNumber: string;
   clientName: string;
   email?: string;
+  address?: string;
   issueDate?: string;
   dueDate?: string;
   subject?: string;
@@ -50,12 +51,16 @@ export function generateInvoicePdfBuffer(invoice: InvoicePdfData): Promise<Buffe
 
     // Bill To / Date block
     const billToY = doc.y;
+    const billToWidth = CONTENT_WIDTH - 220;
     doc.fillColor('#94a3b8').fontSize(9).font('Helvetica-Bold').text('BILL TO', MARGIN, billToY);
-    doc.fillColor('#0f172a').fontSize(11).font('Helvetica-Bold').text(invoice.clientName || '—', MARGIN, doc.y + 2);
-    if (invoice.email) doc.fillColor('#475569').fontSize(9).font('Helvetica').text(invoice.email, MARGIN, doc.y + 2);
+    doc.fillColor('#0f172a').fontSize(11).font('Helvetica-Bold').text(invoice.clientName || '—', MARGIN, doc.y + 2, { width: billToWidth });
+    (invoice.address || '').split('\n').map((line) => line.trim()).filter(Boolean).forEach((line) => {
+      doc.fillColor('#475569').fontSize(9).font('Helvetica').text(line, MARGIN, doc.y + 2, { width: billToWidth });
+    });
     if (invoice.vatRegistered === 'VAT Registered' && invoice.trnNumber) {
-      doc.fillColor('#475569').fontSize(9).font('Helvetica').text(`TRN: ${invoice.trnNumber}`, MARGIN, doc.y + 2);
+      doc.fillColor('#475569').fontSize(9).font('Helvetica').text(`TRN: ${invoice.trnNumber}`, MARGIN, doc.y + 2, { width: billToWidth });
     }
+    const billToBottom = doc.y;
 
     doc.fillColor('#94a3b8').fontSize(9).font('Helvetica-Bold').text('ISSUE DATE', MARGIN, billToY, { align: 'right', width: CONTENT_WIDTH });
     doc.fillColor('#0f172a').fontSize(10).font('Helvetica').text(invoice.issueDate ? fmtDate(invoice.issueDate) : '—', { align: 'right', width: CONTENT_WIDTH });
@@ -63,13 +68,15 @@ export function generateInvoicePdfBuffer(invoice: InvoicePdfData): Promise<Buffe
       doc.fillColor('#94a3b8').fontSize(9).font('Helvetica-Bold').text('DUE DATE', MARGIN, doc.y + 6, { align: 'right', width: CONTENT_WIDTH });
       doc.fillColor('#0f172a').fontSize(10).font('Helvetica').text(fmtDate(invoice.dueDate), { align: 'right', width: CONTENT_WIDTH });
     }
+    const dateBottom = doc.y;
 
     doc.moveDown(1.5);
+    const billBlockBottom = Math.max(doc.y, billToBottom + 12, dateBottom + 12);
     if (invoice.subject) {
-      doc.fillColor('#0f172a').fontSize(11).font('Helvetica-Bold').text(invoice.subject, MARGIN, Math.max(doc.y, billToY + 70));
+      doc.fillColor('#0f172a').fontSize(11).font('Helvetica-Bold').text(invoice.subject, MARGIN, billBlockBottom);
       doc.moveDown(0.5);
     } else {
-      doc.y = Math.max(doc.y, billToY + 70);
+      doc.y = billBlockBottom;
     }
 
     // Table header

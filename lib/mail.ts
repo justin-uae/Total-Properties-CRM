@@ -89,6 +89,7 @@ export async function sendInvoiceEmail(invoiceId: string) {
       invoiceNumber: data.invoiceNumber || '',
       clientName: data.clientName || '',
       email: data.email,
+      address: data.address,
       issueDate: data.issueDate,
       dueDate: data.dueDate,
       subject: data.subject,
