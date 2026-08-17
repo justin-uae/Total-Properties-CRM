@@ -3,7 +3,6 @@ import path from 'path';
 export const LOGO_PATH = path.join(process.cwd(), 'public', 'images', 'image.png');
 const LOGO_ASPECT = 206 / 327;
 const LOGO_WIDTH = 110;
-const LOGO_HEIGHT = LOGO_WIDTH * LOGO_ASPECT;
 
 export const STAMP_PATH = path.join(process.cwd(), 'public', 'images', 'stamp.png');
 const STAMP_WIDTH = 90;
@@ -38,11 +37,12 @@ export const TERMS_AND_CONDITIONS = [
 ];
 
 /** Draws the logo + letterhead block, and the document title/number to the right. Returns the y position to continue drawing from. */
-export function drawLetterhead(doc: PDFKit.PDFDocument, MARGIN: number, CONTENT_WIDTH: number, docTitle: string, docNumber: string) {
+export function drawLetterhead(doc: PDFKit.PDFDocument, MARGIN: number, CONTENT_WIDTH: number, docTitle: string, docNumber: string, logoWidth: number = LOGO_WIDTH) {
   const topY = MARGIN;
+  const logoHeight = logoWidth * LOGO_ASPECT;
 
   try {
-    doc.image(LOGO_PATH, MARGIN, topY, { width: LOGO_WIDTH });
+    doc.image(LOGO_PATH, MARGIN, topY, { width: logoWidth });
   } catch {
     // Logo file missing on disk — continue without it rather than failing the whole document.
   }
@@ -50,7 +50,7 @@ export function drawLetterhead(doc: PDFKit.PDFDocument, MARGIN: number, CONTENT_
   doc.fillColor('#0f172a').fontSize(20).font('Helvetica-Bold').text(docTitle, MARGIN, topY, { align: 'right', width: CONTENT_WIDTH });
   doc.fontSize(10).font('Helvetica').fillColor('#475569').text(`# ${docNumber}`, { align: 'right', width: CONTENT_WIDTH });
 
-  let y = topY + LOGO_HEIGHT + 10;
+  let y = topY + logoHeight + 10;
   doc.fillColor('#0f172a').fontSize(9.5).font('Helvetica-Bold').text(COMPANY_NAME_LINE, MARGIN, y, { width: CONTENT_WIDTH });
   doc.fillColor('#475569').fontSize(8).font('Helvetica');
   COMPANY_ADDRESS_LINES.forEach((line) => {

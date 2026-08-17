@@ -46,7 +46,7 @@ export function generateInvoicePdfBuffer(invoice: InvoicePdfData): Promise<Buffe
 
     const totals = computeInvoiceTotals(invoice.items);
 
-    drawLetterhead(doc, MARGIN, CONTENT_WIDTH, 'INVOICE', invoice.invoiceNumber);
+    drawLetterhead(doc, MARGIN, CONTENT_WIDTH, 'TAX INVOICE', invoice.invoiceNumber, 135);
     doc.moveDown(1.5);
 
     // Bill To / Date block
