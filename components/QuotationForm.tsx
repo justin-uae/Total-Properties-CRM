@@ -41,7 +41,7 @@ export function QuotationForm({ existing, onClose, onSaved }: { existing: Record
   const [clients, setClients] = useState<RecordRow[]>([]);
   const [recordId, setRecordId] = useState<string | null>(existing?.id || null);
   const [values, setValues] = useState<QuotationFormValues>(() => ({
-    quoteNumber: existing?.data.quoteNumber || `Q-${Date.now()}`,
+    quoteNumber: existing?.data.quoteNumber || '',
     clientName: existing?.data.clientName || '',
     email: existing?.data.email || '',
     issueDate: existing?.data.issueDate || todayIso(),
@@ -239,7 +239,7 @@ export function QuotationForm({ existing, onClose, onSaved }: { existing: Record
               </div>
               <div className="text-right">
                 <p className="text-2xl font-black">QUOTATION</p>
-                <p className="text-sm text-slate-500"># {values.quoteNumber}</p>
+                <p className="text-sm text-slate-500"># {values.quoteNumber || 'Auto-generated on save'}</p>
               </div>
             </div>
 
@@ -296,14 +296,14 @@ export function QuotationForm({ existing, onClose, onSaved }: { existing: Record
             </div>
             <button type="button" onClick={addItem} className="mt-2 text-xs font-semibold text-blue-600 hover:underline">+ Add item</button>
 
-            <div className="mt-6 flex justify-end">
-              <div className="w-full max-w-xs space-y-1.5 text-sm">
-                <div className="flex justify-between text-slate-500"><span>Sub Total</span><span>{currency(totals.subTotal)}</span></div>
-                {totals.discountTotal > 0 && <div className="flex justify-between text-slate-500"><span>Discount</span><span>-{currency(totals.discountTotal)}</span></div>}
-                {totals.taxTotal > 0 && <div className="flex justify-between text-slate-500"><span>Tax</span><span>{currency(totals.taxTotal)}</span></div>}
-                <div className="flex justify-between border-t border-slate-200 pt-1.5 text-base font-black"><span>Total (AED)</span><span>{currency(totals.total)}</span></div>
+            {(totals.discountTotal > 0 || totals.taxTotal > 0) && (
+              <div className="mt-6 flex justify-end">
+                <div className="w-full max-w-xs space-y-1.5 text-sm">
+                  {totals.discountTotal > 0 && <div className="flex justify-between text-slate-500"><span>Discount</span><span>-{currency(totals.discountTotal)}</span></div>}
+                  {totals.taxTotal > 0 && <div className="flex justify-between text-slate-500"><span>Tax</span><span>{currency(totals.taxTotal)}</span></div>}
+                </div>
               </div>
-            </div>
+            )}
 
             {error && <p className="mt-4 rounded-xl bg-red-50 px-3 py-2 text-sm font-medium text-red-600">{error}</p>}
 
@@ -331,7 +331,7 @@ export function QuotationForm({ existing, onClose, onSaved }: { existing: Record
       <div className="grid gap-4 md:grid-cols-2">
         {field('Client / Company Name', <Combobox value={values.clientName} onChange={pickClient} options={clientOptions} placeholder="Select or type a client name" required />)}
         {field('Client Email', <input className="input" type="email" value={values.email} onChange={(e) => setValues((v) => ({ ...v, email: e.target.value }))} />)}
-        {field('Quote Number', <input className="input bg-slate-50" value={values.quoteNumber} readOnly />)}
+        {field('Quote Number', <input className="input bg-slate-50" value={values.quoteNumber || 'Auto-generated on save'} readOnly />)}
         {field('Date', <input className="input" type="date" value={values.issueDate} onChange={(e) => setValues((v) => ({ ...v, issueDate: e.target.value }))} />)}
         {field('Subject', <input className="input" placeholder="e.g. Office Space Proposal" value={values.subject} onChange={(e) => setValues((v) => ({ ...v, subject: e.target.value }))} />)}
         {field('Valid Until', <input className="input" type="date" value={values.validUntil} onChange={(e) => setValues((v) => ({ ...v, validUntil: e.target.value }))} />)}
@@ -407,14 +407,14 @@ export function QuotationForm({ existing, onClose, onSaved }: { existing: Record
         </button>
       </div>
 
-      <div className="mt-6 flex justify-end">
-        <div className="w-full max-w-xs space-y-1.5 text-sm">
-          <div className="flex justify-between text-slate-500"><span>Sub Total</span><span>{currency(totals.subTotal)}</span></div>
-          {totals.discountTotal > 0 && <div className="flex justify-between text-slate-500"><span>Discount</span><span>-{currency(totals.discountTotal)}</span></div>}
-          {totals.taxTotal > 0 && <div className="flex justify-between text-slate-500"><span>Tax</span><span>{currency(totals.taxTotal)}</span></div>}
-          <div className="flex justify-between border-t border-slate-200 pt-1.5 text-base font-black"><span>Total (AED)</span><span>{currency(totals.total)}</span></div>
+      {(totals.discountTotal > 0 || totals.taxTotal > 0) && (
+        <div className="mt-6 flex justify-end">
+          <div className="w-full max-w-xs space-y-1.5 text-sm">
+            {totals.discountTotal > 0 && <div className="flex justify-between text-slate-500"><span>Discount</span><span>-{currency(totals.discountTotal)}</span></div>}
+            {totals.taxTotal > 0 && <div className="flex justify-between text-slate-500"><span>Tax</span><span>{currency(totals.taxTotal)}</span></div>}
+          </div>
         </div>
-      </div>
+      )}
 
       {error && <p className="mt-4 rounded-xl bg-red-50 px-3 py-2 text-sm font-medium text-red-600">{error}</p>}
 

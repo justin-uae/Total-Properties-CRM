@@ -126,12 +126,8 @@ export function generateQuotationPdfBuffer(quote: QuotationPdfData): Promise<Buf
       doc.text(value, totalsX + 120, y, { width: 100, align: 'right' });
       doc.y = y + (bold ? 20 : 16);
     }
-    totalsRow('Sub Total', currency(totals.subTotal));
     if (totals.discountTotal > 0) totalsRow('Discount', `-${currency(totals.discountTotal)}`);
     if (totals.taxTotal > 0) totalsRow('Tax', currency(totals.taxTotal));
-    doc.moveTo(totalsX, doc.y).lineTo(MARGIN + CONTENT_WIDTH, doc.y).strokeColor('#cbd5e1').stroke();
-    doc.moveDown(0.3);
-    totalsRow('Total (AED)', currency(totals.total), true);
 
     drawTermsAndConditions(doc, MARGIN, CONTENT_WIDTH);
 

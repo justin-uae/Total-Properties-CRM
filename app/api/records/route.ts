@@ -10,6 +10,7 @@ import { meetingRoomClash } from '@/lib/meeting-rooms';
 import { generateTicketNumber } from '@/lib/tickets';
 import { generateContractNumber } from '@/lib/contracts';
 import { generateInvoiceNumber } from '@/lib/invoices';
+import { generateQuotationNumber } from '@/lib/quotations';
 import { applyRolePermissions } from '@/lib/permissions';
 
 function titleFor(module: string, data: any) {
@@ -93,6 +94,10 @@ export async function POST(req: NextRequest) {
 
   if (module === 'invoices') {
     data.invoiceNumber = await generateInvoiceNumber();
+  }
+
+  if (module === 'quotations') {
+    data.quoteNumber = await generateQuotationNumber();
   }
 
   const record = await prisma.record.create({
