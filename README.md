@@ -196,7 +196,10 @@ WHATSAPP_VERIFY_TOKEN="your-verify-token"
 WHATSAPP_APP_SECRET="your-meta-app-secret"
 ```
 
-Incoming WhatsApp messages create CRM leads and queue automation.
+Incoming WhatsApp messages run a short guided reply flow (name → email → enquiry) before creating a
+CRM lead (module `leads`, source `WhatsApp`) and queuing automation — see `app/api/whatsapp/webhook/route.ts`.
+Outbound replies require WhatsApp credentials to be configured via `scripts/configure-whatsapp.js`
+(phone number ID + access token, stored in the `Setting` table — there's no admin UI for this).
 
 ## Private Files
 

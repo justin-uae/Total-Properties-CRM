@@ -141,6 +141,17 @@ model RateLimit {
   @@unique([key, bucket])
 }
 
+model WhatsAppSession {
+  id            String   @id @default(cuid())
+  phone         String   @unique
+  step          String   @default("ASK_NAME")
+  fullName      String?
+  email         String?
+  lastMessageId String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
 model AutomationQueue {
   id          String   @id @default(cuid())
   trigger     String
