@@ -19,7 +19,13 @@ async function callMessagesApi(payload: Record<string, unknown>) {
     body: JSON.stringify({ messaging_product: 'whatsapp', ...payload })
   });
   const json = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(json?.error?.message || `WhatsApp send failed (${res.status})`);
+  if (!res.ok) {
+    const err = json?.error;
+    const detail = err
+      ? `${err.message}${err.error_subcode ? ` (code ${err.code}/${err.error_subcode})` : err.code ? ` (code ${err.code})` : ''}${err.fbtrace_id ? ` [trace ${err.fbtrace_id}]` : ''}`
+      : `WhatsApp send failed (${res.status})`;
+    throw new Error(detail);
+  }
   return json;
 }
 
