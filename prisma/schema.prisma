@@ -147,6 +147,7 @@ model WhatsAppSession {
   step          String   @default("ASK_NAME")
   fullName      String?
   email         String?
+  serviceType   String?
   lastMessageId String?
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
