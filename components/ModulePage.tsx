@@ -106,6 +106,7 @@ export function ModulePage({ slug }: { slug: string }) {
   const [transferError, setTransferError] = useState('');
   const [invoiceFromBookingRow, setInvoiceFromBookingRow] = useState<RecordRow | null>(null);
   const [invoiceFromQuoteRow, setInvoiceFromQuoteRow] = useState<RecordRow | null>(null);
+  const [quoteFromLeadRow, setQuoteFromLeadRow] = useState<RecordRow | null>(null);
   const [recordPaymentRow, setRecordPaymentRow] = useState<RecordRow | null>(null);
   const [sendingEmail, setSendingEmail] = useState<Record<string, boolean>>({});
   const [emailSendError, setEmailSendError] = useState<Record<string, string>>({});
@@ -620,6 +621,16 @@ export function ModulePage({ slug }: { slug: string }) {
                         {transferring[row.id] ? 'Transferring…' : 'Transfer to Quote'}
                       </button>
                     )}
+                    {module.slug === 'web-form-leads' && (
+                      <button
+                        onClick={() => setQuoteFromLeadRow(row)}
+                        title="Create Quotation"
+                        className="mr-2 rounded-lg px-2 py-1 text-xs font-semibold text-blue-600 hover:bg-blue-50"
+                      >
+                        <FileText className="inline h-3.5 w-3.5 mr-1" />
+                        Create Quotation
+                      </button>
+                    )}
                     {module.slug === 'meeting-room-bookings' && (
                       row.data.invoiceId ? (
                         <span className="mr-2 inline-flex flex-col items-end">
@@ -958,6 +969,16 @@ export function ModulePage({ slug }: { slug: string }) {
           fromQuote={invoiceFromQuoteRow}
           modal
           onClose={() => setInvoiceFromQuoteRow(null)}
+          onSaved={load}
+        />
+      )}
+
+      {quoteFromLeadRow && (
+        <QuotationForm
+          existing={null}
+          fromLead={quoteFromLeadRow}
+          modal
+          onClose={() => setQuoteFromLeadRow(null)}
           onSaved={load}
         />
       )}

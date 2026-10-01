@@ -37,7 +37,30 @@ function daysFromNowIso(days: number) {
   return d.toISOString().slice(0, 10);
 }
 
-export function QuotationForm({ existing, onClose, onSaved }: { existing: RecordRow | null; onClose: () => void; onSaved: () => void }) {
+function fromLeadValues(lead: RecordRow): Partial<QuotationFormValues> {
+  const d = lead.data;
+  const service = [d.serviceType, d.location].filter(Boolean).join(' - ');
+  return {
+    clientName: d.companyName || d.fullName || lead.title,
+    email: d.email || '',
+    subject: d.serviceType ? `${d.serviceType} Proposal` : '',
+    items: [{ ...emptyInvoiceItem(), description: service }]
+  };
+}
+
+export function QuotationForm({
+  existing,
+  fromLead,
+  modal,
+  onClose,
+  onSaved
+}: {
+  existing: RecordRow | null;
+  fromLead?: RecordRow | null;
+  modal?: boolean;
+  onClose: () => void;
+  onSaved: () => void;
+}) {
   const [clients, setClients] = useState<RecordRow[]>([]);
   const [recordId, setRecordId] = useState<string | null>(existing?.id || null);
   const [values, setValues] = useState<QuotationFormValues>(() => ({
@@ -49,7 +72,8 @@ export function QuotationForm({ existing, onClose, onSaved }: { existing: Record
     subject: existing?.data.subject || '',
     items: existing?.data.items?.length ? existing.data.items : [emptyInvoiceItem()],
     vatRegistered: existing?.data.vatRegistered || '',
-    trnNumber: existing?.data.trnNumber || ''
+    trnNumber: existing?.data.trnNumber || '',
+    ...(fromLead ? fromLeadValues(fromLead) : {})
   }));
   const [attachment, setAttachment] = useState<FileRef | null>(isFileRef(existing?.data.attachment) ? existing!.data.attachment : null);
   const [uploadingAttachment, setUploadingAttachment] = useState(false);
@@ -134,7 +158,13 @@ export function QuotationForm({ existing, onClose, onSaved }: { existing: Record
       description: values.subject,
       vatRegistered: values.vatRegistered,
       trnNumber: values.vatRegistered === 'VAT Registered' ? values.trnNumber : '',
-      attachment
+      attachment,
+      ...(fromLead ? {
+        telephone: fromLead.data.telephone || '',
+        serviceType: fromLead.data.serviceType || '',
+        location: fromLead.data.location || '',
+        fromLeadId: fromLead.id
+      } : {})
     };
   }
 
@@ -143,6 +173,15 @@ export function QuotationForm({ existing, onClose, onSaved }: { existing: Record
     if (!values.email.trim()) return 'Client email is required to send the quotation';
     if (values.items.every((it) => !it.description.trim())) return 'Add at least one item';
     return '';
+  }
+
+  async function linkLead(quotationId: string) {
+    if (!fromLead || fromLead.data.quotationId === quotationId) return;
+    await fetch(`/api/records/${fromLead.id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: 'Quoted', data: { ...fromLead.data, quotationId } })
+    });
   }
 
   async function persist(status: 'Draft' | 'Sent'): Promise<string | null> {
@@ -165,6 +204,7 @@ export function QuotationForm({ existing, onClose, onSaved }: { existing: Record
     const json = await res.json();
     if (!res.ok) { setError(json.message || 'Could not save quotation'); return null; }
     setRecordId(json.record.id);
+    await linkLead(json.record.id);
     if (attachment) {
       await fetch(`/api/files/${attachment.id}`, {
         method: 'PATCH',
@@ -321,8 +361,8 @@ export function QuotationForm({ existing, onClose, onSaved }: { existing: Record
     );
   }
 
-  return (
-    <div className="card p-6">
+  const formBody = (
+    <>
       <div className="mb-5 flex items-center justify-between">
         <h2 className="text-xl font-bold">{existing ? 'Edit' : 'New'} Quotation</h2>
         <button onClick={onClose} className="btn-secondary">Cancel</button>
@@ -427,6 +467,19 @@ export function QuotationForm({ existing, onClose, onSaved }: { existing: Record
           Preview and Send
         </button>
       </div>
-    </div>
+    </>
   );
+
+  if (modal) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
+        <div className="relative max-h-[92vh] w-full max-w-3xl overflow-y-auto rounded-2xl bg-white p-6 shadow-xl">
+          {formBody}
+        </div>
+      </div>
+    );
+  }
+
+  return <div className="card p-6">{formBody}</div>;
 }
