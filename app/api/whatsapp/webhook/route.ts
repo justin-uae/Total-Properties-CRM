@@ -75,7 +75,7 @@ export async function GET(req: NextRequest) {
 async function createLead(from: string, session: { fullName: string | null; email: string | null }, serviceType: string, enquiry: string, msgId: string) {
   const record = await prisma.record.create({
     data: {
-      module: 'leads',
+      module: 'web-form-leads',
       title: session.fullName || `WhatsApp ${from}`,
       status: 'New',
       source: 'WhatsApp',

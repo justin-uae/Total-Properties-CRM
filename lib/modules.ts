@@ -64,6 +64,8 @@ export type ModuleConfig = {
   fields: ModuleField[];
   tableFields: string[];
   systemOnly?: boolean;
+  // Kept for existing records and deep links, but not listed in the sidebar.
+  navHidden?: boolean;
 };
 
 export const serviceTypes = ['Virtual Office', 'Co Working Office', 'Private Office', 'Meeting Room'];
@@ -118,6 +120,7 @@ export const modules: ModuleConfig[] = [
     title: 'Leads',
     singular: 'Lead',
     group: 'Sales',
+    navHidden: true,
     description: 'All telephone, WhatsApp, walk-in and converted website enquiries.',
     icon: Users,
     defaultStatus: 'New',

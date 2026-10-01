@@ -82,7 +82,7 @@ export function AppShell({ user, children }: { user: ShellUser; children: React.
   const grouped = useMemo(() => {
     return moduleGroups.map((group) => ({
       group,
-      items: modules.filter((module) => module.group === group && canSee(user, module.slug))
+      items: modules.filter((module) => module.group === group && !module.navHidden && canSee(user, module.slug))
     })).filter((g) => g.items.length > 0);
   }, [user]);
 

@@ -19,7 +19,7 @@ export default async function DashboardPage() {
   // only Master Admin should see — everyone else has their own landing page.
   if (user.role !== 'MASTER_ADMIN') redirect(defaultRouteForRole(user.role));
 
-  const newLeads = await count('leads', 'New');
+  const newLeads = await count('web-form-leads', 'New');
   const activeClients = await count('clients', 'Active');
   const openTickets = await count('maintenance', 'Open');
   const bookings = await count('meeting-room-bookings');
