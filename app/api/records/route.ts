@@ -5,17 +5,13 @@ import { assertCan, requireUser } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { auditLog } from '@/lib/audit';
 import { moduleMap } from '@/lib/modules';
-import { ipFromHeaders, publicToken } from '@/lib/utils';
+import { ipFromHeaders, publicToken, recordTitle } from '@/lib/utils';
 import { meetingRoomClash } from '@/lib/meeting-rooms';
 import { generateTicketNumber } from '@/lib/tickets';
 import { generateContractNumber } from '@/lib/contracts';
 import { generateInvoiceNumber } from '@/lib/invoices';
 import { generateQuotationNumber } from '@/lib/quotations';
 import { applyRolePermissions } from '@/lib/permissions';
-
-function titleFor(module: string, data: any) {
-  return data.fullName || data.companyName || data.clientName || data.visitorName || data.roomName || data.unitName || data.invoiceNumber || data.quoteNumber || data.contractNumber || data.ruleName || data.serviceName || `${module} record`;
-}
 
 export async function GET(req: NextRequest) {
   await requireUser();
@@ -103,7 +99,7 @@ export async function POST(req: NextRequest) {
   const record = await prisma.record.create({
     data: {
       module,
-      title: titleFor(module, data),
+      title: recordTitle(module, data),
       status,
       source: data.source,
       location: data.location,

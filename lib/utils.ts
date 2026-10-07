@@ -23,6 +23,11 @@ export function fmtDate(value?: string | Date | null) {
   return `${part('day')} ${part('month')} ${part('weekday')} ${part('year')}`;
 }
 
+/** The list title shown for a record, derived from its data. */
+export function recordTitle(module: string, data: any) {
+  return data.fullName || data.companyName || data.clientName || data.visitorName || data.roomName || data.unitName || data.invoiceNumber || data.quoteNumber || data.contractNumber || data.ruleName || data.serviceName || `${module} record`;
+}
+
 export function publicToken(prefix = 'tbc') {
   return `${prefix}_${crypto.randomBytes(18).toString('hex')}`;
 }

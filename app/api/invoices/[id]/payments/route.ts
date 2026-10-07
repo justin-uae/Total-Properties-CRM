@@ -57,7 +57,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   const existingPayments = await prisma.record.findMany({
     where: { module: 'payments', data: { path: ['invoiceId'], equals: invoice.id } }
   });
-  const totalPaid = existingPayments.reduce((sum, p) => sum + Number((p.data as any)?.amount || 0), 0);
+  // importedAmountPaid: paid before the invoice was imported, so it has no payment records here.
+  const totalPaid = existingPayments.reduce((sum, p) => sum + Number((p.data as any)?.amount || 0), Number(invData.importedAmountPaid || 0));
   const invoiceTotal = Number(invData.total ?? invData.amount ?? 0);
   const newStatus = invoiceTotal > 0 && totalPaid >= invoiceTotal ? 'Paid' : totalPaid > 0 ? 'Part Paid' : invoice.status;
 

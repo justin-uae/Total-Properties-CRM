@@ -4,9 +4,13 @@ import { ModuleConfig, moduleMap } from '@/lib/modules';
 import { currency, fmtDate, toDatetimeLocal, fromDatetimeLocal, isReminderDue } from '@/lib/utils';
 import { Spinner } from '@/components/ui/Spinner';
 import { Combobox } from '@/components/ui/Combobox';
+import { SortSelect, useSortOrder } from '@/components/ui/SortSelect';
+import { sortOptions, sortRecords } from '@/lib/sort';
 import { ImageLightbox } from '@/components/ui/ImageLightbox';
 import { InvoiceForm } from '@/components/InvoiceForm';
 import { QuotationForm } from '@/components/QuotationForm';
+import { ImportModal } from '@/components/ImportModal';
+import { IMPORTABLE_MODULES } from '@/lib/import-modules';
 import { MaintenanceDetail } from '@/components/MaintenanceDetail';
 import { RecordPaymentModal } from '@/components/RecordPaymentModal';
 import { AlertTriangle, Bell, Check, CreditCard, Download, Eye, EyeOff, FileText, Plus, RefreshCw, Send, Trash2, Upload, X as XIcon } from 'lucide-react';
@@ -114,8 +118,10 @@ export function ModulePage({ slug }: { slug: string }) {
   const [chequeActionError, setChequeActionError] = useState<Record<string, string>>({});
   const [confirmReminder, setConfirmReminder] = useState<{ url: string; key: string; title: string; description: string } | null>(null);
   const [showForm, setShowForm] = useState(false);
+  const [showImport, setShowImport] = useState(false);
   const [editing, setEditing] = useState<RecordRow | null>(null);
   const [query, setQuery] = useState('');
+  const [sortOrder, setSortOrder] = useSortOrder(slug);
   const [form, setForm] = useState<Record<string, any>>({ status: module.defaultStatus || module.statuses[0] || 'New' });
   const [dynamicRecords, setDynamicRecords] = useState<Record<string, RecordRow[]>>({});
   const [showPassword, setShowPassword] = useState<Record<string, boolean>>({});
@@ -153,9 +159,9 @@ export function ModulePage({ slug }: { slug: string }) {
         const detail = [r.data?.contactName, r.data?.email || r.data?.telephone].filter(Boolean).join(' • ');
         out.push({ value: v, label: v, detail: detail || undefined });
       }
-      return out;
+      return sortOptions(out);
     }
-    return records.map((r) => ({ value: r.id, label: r.title }));
+    return sortOptions(records.map((r) => ({ value: r.id, label: r.title })));
   }
 
   function handleSelectChange(field: NonNullable<typeof module.fields>[number], value: string) {
@@ -184,7 +190,12 @@ export function ModulePage({ slug }: { slug: string }) {
     setForm(next);
   }
 
-  const filtered = useMemo(() => rows.filter((row) => JSON.stringify(row).toLowerCase().includes(query.toLowerCase())), [rows, query]);
+  const filtered = useMemo(() => sortRecords(
+    rows.filter((row) => JSON.stringify(row).toLowerCase().includes(query.toLowerCase())),
+    sortOrder,
+    (row) => row.title || '',
+    (row) => row.createdAt
+  ), [rows, query, sortOrder]);
 
   function startCreate() {
     setEditing(null);
@@ -408,11 +419,15 @@ export function ModulePage({ slug }: { slug: string }) {
         </div>
         <div className="flex flex-wrap gap-2">
           <input value={query} onChange={(e) => setQuery(e.target.value)} className="input w-full sm:w-64" placeholder="Search records..." />
+          <SortSelect value={sortOrder} onChange={setSortOrder} />
           <button onClick={load} disabled={loading} className="btn-secondary flex items-center gap-2">
             <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
             <span className="hidden sm:inline">Refresh</span>
           </button>
           <button onClick={exportCsv} className="btn-secondary"><Download className="mr-2 inline h-4 w-4" /><span className="hidden sm:inline">Export</span></button>
+          {IMPORTABLE_MODULES.includes(module.slug) && (
+            <button onClick={() => setShowImport(true)} className="btn-secondary"><Upload className="mr-2 inline h-4 w-4" /><span className="hidden sm:inline">Import</span></button>
+          )}
           <button onClick={startCreate} className="btn-primary"><Plus className="mr-2 inline h-4 w-4" />Add {module.singular}</button>
         </div>
       </div>
@@ -606,7 +621,9 @@ export function ModulePage({ slug }: { slug: string }) {
                   <td className={`px-5 py-4 font-semibold ${module.slug === 'payments' ? 'max-w-[200px] whitespace-normal break-words' : 'whitespace-nowrap'}`}>{row.title}<p className="text-xs font-normal text-slate-400">{fmtDate(row.createdAt)}</p></td>
                   {module.tableFields.map((field) => (
                     <td key={field} className="px-5 py-4 whitespace-nowrap">
-                      {field === 'status' ? <span className="status-pill bg-orange-50 text-orange-700">{row.status}</span> : valueFor(row, field)}
+                      {field === 'status' ? <span className="status-pill bg-orange-50 text-orange-700">{row.status}</span>
+                        : ((field === 'invoiceNumber' && row.data.importedInvoiceNumber) || (field === 'quoteNumber' && row.data.importedQuoteNumber)) ? <span title={`Uploaded as ${row.data.importedInvoiceNumber || row.data.importedQuoteNumber}`} className="cursor-help underline decoration-dotted underline-offset-4">{valueFor(row, field)}</span>
+                        : valueFor(row, field)}
                     </td>
                   ))}
                   <td className="px-5 py-4 whitespace-nowrap text-right">
@@ -982,6 +999,8 @@ export function ModulePage({ slug }: { slug: string }) {
           onSaved={load}
         />
       )}
+
+      {showImport && <ImportModal module={module} onClose={() => setShowImport(false)} onSaved={load} />}
 
       {recordPaymentRow && (
         <RecordPaymentModal

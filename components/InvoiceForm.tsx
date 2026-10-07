@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Plus, Trash2, X } from 'lucide-react';
 import { Combobox } from '@/components/ui/Combobox';
+import { sortOptions } from '@/lib/sort';
 import { Spinner } from '@/components/ui/Spinner';
 import { currency } from '@/lib/utils';
 import { computeInvoiceTotals, emptyInvoiceItem, InvoiceItem, lineAmounts } from '@/lib/invoice-calc';
@@ -139,7 +140,7 @@ export function InvoiceForm({
   }, []);
 
   const clientOptions = useMemo(
-    () => clients.map((c) => ({ value: c.data.companyName || c.title, label: c.data.companyName || c.title, detail: c.data.email })),
+    () => sortOptions(clients.map((c) => ({ value: c.data.companyName || c.title, label: c.data.companyName || c.title, detail: c.data.email }))),
     [clients]
   );
 

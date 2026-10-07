@@ -4,14 +4,10 @@ import { assertCan, requireUser } from '@/lib/auth';
 import { prisma } from '@/lib/db';
 import { auditLog } from '@/lib/audit';
 import { moduleMap } from '@/lib/modules';
-import { ipFromHeaders } from '@/lib/utils';
+import { ipFromHeaders, recordTitle } from '@/lib/utils';
 import { deleteFile } from '@/lib/storage';
 import { meetingRoomClash } from '@/lib/meeting-rooms';
 import { applyRolePermissions } from '@/lib/permissions';
-
-function titleFor(module: string, data: any) {
-  return data.fullName || data.companyName || data.clientName || data.visitorName || data.roomName || data.unitName || data.invoiceNumber || data.quoteNumber || data.contractNumber || data.ruleName || data.serviceName || `${module} record`;
-}
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -62,7 +58,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
   const record = await prisma.record.update({
     where: { id },
     data: {
-      title: titleFor(before.module, data),
+      title: recordTitle(before.module, data),
       status: String(body.status || data.status || before.status),
       source: data.source,
       location: data.location,
