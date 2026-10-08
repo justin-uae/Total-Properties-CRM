@@ -352,7 +352,7 @@ export function InvoiceForm({
                   {values.items.map((item, i) => (
                     <tr key={i}>
                       <td className="px-3 py-2">
-                        <input className="w-full min-w-[160px] rounded-md border-none bg-transparent outline-none focus:bg-slate-50" value={item.description} onChange={(e) => updateItem(i, { description: e.target.value })} />
+                        <textarea className="block w-full min-w-[160px] resize-none rounded-md border-none bg-transparent outline-none focus:bg-slate-50" rows={Math.max(1, item.description.split('\n').length)} value={item.description} onChange={(e) => updateItem(i, { description: e.target.value })} />
                       </td>
                       <td className="px-3 py-2 text-right"><input type="number" className="w-16 rounded-md border-none bg-transparent text-right outline-none focus:bg-slate-50" value={item.qty} onChange={(e) => updateItem(i, { qty: Number(e.target.value) })} /></td>
                       <td className="px-3 py-2 text-right"><input type="number" className="w-20 rounded-md border-none bg-transparent text-right outline-none focus:bg-slate-50" value={item.rate} onChange={(e) => updateItem(i, { rate: Number(e.target.value) })} /></td>
@@ -437,7 +437,7 @@ export function InvoiceForm({
             <tbody className="divide-y divide-slate-100">
               {values.items.map((item, i) => (
                 <tr key={i}>
-                  <td className="px-3 py-2"><input className="input" placeholder="Meeting room, or any other" value={item.description} onChange={(e) => updateItem(i, { description: e.target.value })} /></td>
+                  <td className="px-3 py-2"><textarea className="input min-w-[240px] resize-y" rows={Math.max(2, item.description.split('\n').length)} placeholder="Meeting room, or any other" value={item.description} onChange={(e) => updateItem(i, { description: e.target.value })} /></td>
                   <td className="px-3 py-2"><input type="number" className="input w-20 text-right" value={item.qty} onChange={(e) => updateItem(i, { qty: Number(e.target.value) })} /></td>
                   <td className="px-3 py-2"><input type="number" className="input w-24 text-right" value={item.rate} onChange={(e) => updateItem(i, { rate: Number(e.target.value) })} /></td>
                   <td className="px-3 py-2"><input type="number" className="input w-20 text-right" value={item.discountPct} onChange={(e) => updateItem(i, { discountPct: Number(e.target.value) })} /></td>
