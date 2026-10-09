@@ -3,6 +3,7 @@ import Stripe from 'stripe';
 import { prisma } from '@/lib/db';
 import { getStripeConfig } from '@/lib/stripe';
 import { isStripePayable } from '@/lib/invoice-calc';
+import { splitEmails } from '@/lib/utils';
 
 export async function POST(_: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -16,7 +17,7 @@ export async function POST(_: Request, { params }: { params: Promise<{ id: strin
   const stripe = new Stripe(secretKey, { apiVersion: '2024-06-20' as any });
   const session = await stripe.checkout.sessions.create({
     mode: 'payment',
-    customer_email: data.email || undefined,
+    customer_email: splitEmails(data.email)[0] || undefined,
     line_items: [{
       quantity: 1,
       price_data: {

@@ -5,7 +5,7 @@ import { Plus, Trash2, X } from 'lucide-react';
 import { Combobox } from '@/components/ui/Combobox';
 import { sortOptions } from '@/lib/sort';
 import { Spinner } from '@/components/ui/Spinner';
-import { currency } from '@/lib/utils';
+import { currency, invalidEmail, splitEmails } from '@/lib/utils';
 import { computeInvoiceTotals, emptyInvoiceItem, InvoiceItem, lineAmounts } from '@/lib/invoice-calc';
 import { durationMinutes } from '@/lib/booking-time';
 
@@ -174,7 +174,7 @@ export function InvoiceForm({
     return {
       invoiceNumber: values.invoiceNumber,
       clientName: values.clientName,
-      email: values.email,
+      email: splitEmails(values.email).join(', '),
       address: values.address,
       issueDate: values.issueDate,
       dueDate: values.dueDate,
@@ -196,6 +196,8 @@ export function InvoiceForm({
   function validate() {
     if (!values.clientName.trim()) return 'Client / company name is required';
     if (!values.email.trim()) return 'Client email is required to send the invoice';
+    const badEmail = invalidEmail(values.email);
+    if (badEmail) return `"${badEmail}" is not a valid email address`;
     if (values.items.every((it) => !it.description.trim())) return 'Add at least one item';
     return '';
   }
@@ -319,9 +321,10 @@ export function InvoiceForm({
                 <Combobox value={values.clientName} onChange={pickClient} options={clientOptions} placeholder="Client / company name" />
                 <input
                   className="input mt-2"
-                  type="email"
+                  type="text"
+                  inputMode="email"
                   value={values.email}
-                  placeholder="Client email"
+                  placeholder="Client email — separate several with commas"
                   onChange={(e) => setValues((v) => ({ ...v, email: e.target.value }))}
                 />
                 {values.vatRegistered === 'VAT Registered' && (
@@ -352,7 +355,7 @@ export function InvoiceForm({
                   {values.items.map((item, i) => (
                     <tr key={i}>
                       <td className="px-3 py-2">
-                        <textarea className="block w-full min-w-[160px] resize-none rounded-md border-none bg-transparent outline-none focus:bg-slate-50" rows={Math.max(1, item.description.split('\n').length)} value={item.description} onChange={(e) => updateItem(i, { description: e.target.value })} />
+                        <textarea className="block w-full min-w-[160px] resize-none rounded-md [field-sizing:content] border-none bg-transparent outline-none focus:bg-slate-50" rows={Math.max(1, item.description.split('\n').length)} value={item.description} onChange={(e) => updateItem(i, { description: e.target.value })} />
                       </td>
                       <td className="px-3 py-2 text-right"><input type="number" className="w-16 rounded-md border-none bg-transparent text-right outline-none focus:bg-slate-50" value={item.qty} onChange={(e) => updateItem(i, { qty: Number(e.target.value) })} /></td>
                       <td className="px-3 py-2 text-right"><input type="number" className="w-20 rounded-md border-none bg-transparent text-right outline-none focus:bg-slate-50" value={item.rate} onChange={(e) => updateItem(i, { rate: Number(e.target.value) })} /></td>
@@ -400,7 +403,7 @@ export function InvoiceForm({
 
       <div className="grid gap-4 md:grid-cols-2">
         {field('Client / Company Name', <Combobox value={values.clientName} onChange={pickClient} options={clientOptions} placeholder="Select or type a client name" required />)}
-        {field('Client Email', <input className="input" type="email" value={values.email} onChange={(e) => setValues((v) => ({ ...v, email: e.target.value }))} />)}
+        {field('Client Email(s)', <input className="input" type="text" inputMode="email" placeholder="Separate several with commas" value={values.email} onChange={(e) => setValues((v) => ({ ...v, email: e.target.value }))} />)}
         {field('Invoice Number', <input className="input bg-slate-50" value={values.invoiceNumber || 'Auto-generated on save'} readOnly />)}
         {field('Date', <input className="input" type="date" value={values.issueDate} onChange={(e) => setValues((v) => ({ ...v, issueDate: e.target.value }))} />)}
         {field('Subject', <input className="input" placeholder="e.g. Meeting Room Booking" value={values.subject} onChange={(e) => setValues((v) => ({ ...v, subject: e.target.value }))} />)}
@@ -437,7 +440,7 @@ export function InvoiceForm({
             <tbody className="divide-y divide-slate-100">
               {values.items.map((item, i) => (
                 <tr key={i}>
-                  <td className="px-3 py-2"><textarea className="input min-w-[240px] resize-y" rows={Math.max(2, item.description.split('\n').length)} placeholder="Meeting room, or any other" value={item.description} onChange={(e) => updateItem(i, { description: e.target.value })} /></td>
+                  <td className="px-3 py-2"><textarea className="input min-w-[240px] resize-y [field-sizing:content]" rows={Math.max(2, item.description.split('\n').length)} placeholder="Meeting room, or any other" value={item.description} onChange={(e) => updateItem(i, { description: e.target.value })} /></td>
                   <td className="px-3 py-2"><input type="number" className="input w-20 text-right" value={item.qty} onChange={(e) => updateItem(i, { qty: Number(e.target.value) })} /></td>
                   <td className="px-3 py-2"><input type="number" className="input w-24 text-right" value={item.rate} onChange={(e) => updateItem(i, { rate: Number(e.target.value) })} /></td>
                   <td className="px-3 py-2"><input type="number" className="input w-20 text-right" value={item.discountPct} onChange={(e) => updateItem(i, { discountPct: Number(e.target.value) })} /></td>

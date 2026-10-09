@@ -77,3 +77,15 @@ export function fromDatetimeLocal(value?: string | null) {
   if (Number.isNaN(date.getTime())) return value;
   return date.toISOString();
 }
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+/** Splits a recipient field holding one or more addresses (separated by commas, semicolons or spaces) into a list. */
+export function splitEmails(value?: string | null) {
+  return String(value || '').split(/[\s,;]+/).filter(Boolean);
+}
+
+/** Returns the first entry of a recipient field that is not a valid email address, or '' when all are valid. */
+export function invalidEmail(value?: string | null) {
+  return splitEmails(value).find((email) => !EMAIL_RE.test(email)) || '';
+}

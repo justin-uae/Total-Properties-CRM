@@ -9,7 +9,7 @@ import { createInvoicePaymentLink } from '@/lib/stripePaymentLink';
 import { isStripePayable } from '@/lib/invoice-calc';
 import { renderTemplate } from '@/lib/emailTemplates';
 import { BRAND_ACCENT } from '@/lib/pdfBranding';
-import { currency, fmtDate } from '@/lib/utils';
+import { currency, fmtDate, splitEmails } from '@/lib/utils';
 import { downloadFile } from '@/lib/storage';
 
 const CRM_CC_RECIPIENTS = ['karen@totalproperty.ae', 'info@totalproperty.ae'];
@@ -118,7 +118,7 @@ export async function sendInvoiceEmail(invoiceId: string) {
 
   await transporter.sendMail({
     from: process.env.SMTP_FROM || `${companyName} <noreply@example.com>`,
-    to: data.email,
+    to: splitEmails(data.email),
     cc: CRM_CC_RECIPIENTS,
     subject,
     html,
@@ -195,7 +195,7 @@ export async function sendQuotationEmail(quoteId: string) {
 
   await transporter.sendMail({
     from: process.env.SMTP_FROM || `${companyName} <noreply@example.com>`,
-    to: data.email,
+    to: splitEmails(data.email),
     cc: CRM_CC_RECIPIENTS,
     subject,
     html: `${bodyHtml}${emailFooterHtml()}`,
