@@ -466,7 +466,7 @@ export const modules: ModuleConfig[] = [
     icon: Banknote,
     defaultStatus: 'Received',
     statuses: ['Received', 'Cheque Deferred/Hold', 'Deposited', 'Paid By Bank Transfer', 'Paid By Cash', 'Returned'],
-    tableFields: ['amount', 'chequeDate', 'deferralStatus', 'status'],
+    tableFields: ['chequeNumber', 'amount', 'chequeDate', 'deferralStatus', 'status'],
     fields: [
       { name: 'clientName', label: 'Company Name', type: 'select', optionsSource: 'clients', optionsValueField: 'companyName', required: true, autofill: { targetField: 'email', sourceDataField: 'email' } },
       { name: 'email', label: 'Recipient Email (for deposit reminder)', type: 'email' },
@@ -475,6 +475,7 @@ export const modules: ModuleConfig[] = [
       { name: 'receivedDate', label: 'Date the Cheque Was Received', type: 'date', required: true },
       { name: 'handedOverBy', label: 'Handed Over By', type: 'text', required: true },
       { name: 'handedOverByMobile', label: 'Mobile Number of Person Handing Over Cheque', type: 'tel' },
+      { name: 'chequeNumber', label: 'Cheque Number', type: 'text', required: true },
       { name: 'bankName', label: 'Bank Name (on Cheque)', type: 'text', required: true },
       { name: 'chequeAccountName', label: 'Cheque Account Name', type: 'text' },
       { name: 'chequeReceipt', label: 'Cheque Receipt', type: 'file', newRow: true },

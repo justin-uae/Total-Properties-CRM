@@ -3,10 +3,10 @@ import { prisma } from '@/lib/db';
 
 const ALL: PermissionAction[] = ['VIEW', 'CREATE', 'EDIT', 'DELETE', 'EXPORT', 'APPROVE', 'EMAIL', 'FINANCE', 'SETTINGS'];
 
-// Reception is limited to the Operations module group only (Reception Dashboard,
-// Visitors, Mail & Parcels, Access Cards & Keys, Maintenance) — Sales, Spaces,
-// Finance and Admin modules (Leads, Quotations, Meeting Rooms, Meeting Room
-// Bookings, Calendar, Floor Plan, Contracts, Documents, Deposits, Move-Outs,
+// Reception gets the Operations module group (Reception Dashboard, Visitors,
+// Mail & Parcels, Access Cards & Keys, Maintenance) plus Meeting Room Bookings.
+// The other Sales, Spaces, Finance and Admin modules (Leads, Quotations, Meeting
+// Rooms, Calendar, Floor Plan, Contracts, Documents, Deposits, Move-Outs,
 // Invoices, Payments, Recurring Billing, Add-On Services, Settings) are
 // Master-Admin-only. staff-users stays Master-Admin-only too (Master Admin
 // bypasses this map entirely via isMasterAdmin()). Clients is granted
@@ -18,7 +18,7 @@ const ALL: PermissionAction[] = ['VIEW', 'CREATE', 'EDIT', 'DELETE', 'EXPORT', '
 const rolePermissions: Record<string, { modules: string[]; actions: PermissionAction[] }[]> = {
   RECEPTION: [
     {
-      modules: ['reception-dashboard', 'visitors', 'mail-parcels', 'access-cards-keys', 'maintenance'],
+      modules: ['reception-dashboard', 'visitors', 'mail-parcels', 'access-cards-keys', 'maintenance', 'meeting-room-bookings'],
       actions: ALL
     },
     {

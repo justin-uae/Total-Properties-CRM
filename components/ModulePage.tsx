@@ -99,7 +99,7 @@ function TableSkeleton({ cols }: { cols: number }) {
   );
 }
 
-export function ModulePage({ slug }: { slug: string }) {
+export function ModulePage({ slug, canInvoice = true }: { slug: string; canInvoice?: boolean }) {
   const module = moduleMap[slug]!;
   const [rows, setRows] = useState<RecordRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -648,7 +648,7 @@ export function ModulePage({ slug }: { slug: string }) {
                         Create Quotation
                       </button>
                     )}
-                    {module.slug === 'meeting-room-bookings' && (
+                    {module.slug === 'meeting-room-bookings' && canInvoice && (
                       row.data.invoiceId ? (
                         <span className="mr-2 inline-flex flex-col items-end">
                           <button

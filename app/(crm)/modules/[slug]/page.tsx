@@ -24,5 +24,5 @@ export default async function Page({ params }: { params: Promise<{ slug: string 
     if (user.role !== 'MASTER_ADMIN') notFound();
     return <SettingsPage />;
   }
-  return <ModulePage slug={slug} />;
+  return <ModulePage slug={slug} canInvoice={can(user, 'invoices', PermissionAction.CREATE)} />;
 }

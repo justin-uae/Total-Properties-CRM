@@ -59,6 +59,7 @@ export default function TenantChequesPage() {
           <table className="w-full text-left text-sm">
             <thead className="bg-slate-50 text-xs uppercase text-slate-500">
               <tr>
+                <th className="px-5 py-3 whitespace-nowrap">Cheque No.</th>
                 <th className="px-5 py-3 whitespace-nowrap">Bank</th>
                 <th className="px-5 py-3 whitespace-nowrap">Amount</th>
                 <th className="px-5 py-3 whitespace-nowrap">Cheque Date</th>
@@ -69,9 +70,9 @@ export default function TenantChequesPage() {
             </thead>
             <tbody className="divide-y divide-slate-100">
               {loading ? (
-                <tr><td className="px-5 py-8 text-slate-500" colSpan={6}><Spinner size="sm" color="muted" /></td></tr>
+                <tr><td className="px-5 py-8 text-slate-500" colSpan={7}><Spinner size="sm" color="muted" /></td></tr>
               ) : rows.length === 0 ? (
-                <tr><td className="px-5 py-8 text-slate-500" colSpan={6}>No cheques on file yet.</td></tr>
+                <tr><td className="px-5 py-8 text-slate-500" colSpan={7}>No cheques on file yet.</td></tr>
               ) : rows.map((row) => {
                 const receipt: FileRef | undefined = row.data.chequeReceipt;
                 const scanned: FileRef | undefined = row.data.scannedCheque;
@@ -79,6 +80,7 @@ export default function TenantChequesPage() {
                 const canRequest = row.status === 'Received' && !row.data.deferralStatus && open;
                 return (
                   <tr key={row.id}>
+                    <td className="px-5 py-4 whitespace-nowrap">{row.data.chequeNumber || '—'}</td>
                     <td className="px-5 py-4 whitespace-nowrap">{row.data.bankName || '—'}</td>
                     <td className="px-5 py-4 whitespace-nowrap">{currency(row.data.amount || 0)}</td>
                     <td className="px-5 py-4 whitespace-nowrap">{fmtDate(row.data.chequeDate)}</td>
