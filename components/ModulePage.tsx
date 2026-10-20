@@ -280,7 +280,7 @@ export function ModulePage({ slug, canInvoice = true }: { slug: string; canInvoi
     setForm((f) => ({ ...f, [fieldName]: (f[fieldName] || []).filter((ref: FileRef) => ref.id !== fileId) }));
   }
 
-  async function handleMultiFileUpload(fieldName: string, files: FileList) {
+  async function handleMultiFileUpload(fieldName: string, files: FileList | File[]) {
     setUploading((u) => ({ ...u, [fieldName]: true }));
     try {
       for (const file of Array.from(files)) {
@@ -581,6 +581,9 @@ export function ModulePage({ slug, canInvoice = true }: { slug: string; canInvoi
                             <input type="file" multiple className="sr-only" accept=".pdf,.jpg,.jpeg,.png,.webp,.gif" disabled={saving}
                               onChange={(e) => { const f = e.target.files; if (f && f.length) handleMultiFileUpload(field.name, f); }} />
                           </label>
+                        )}
+                        {field.scan && !uploading[field.name] && (
+                          <ScanButton label={field.label} disabled={saving} onScanned={(f) => handleMultiFileUpload(field.name, [f])} />
                         )}
                       </div>
                     );

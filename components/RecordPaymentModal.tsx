@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { FileText, Upload, X } from 'lucide-react';
 import { Spinner } from '@/components/ui/Spinner';
+import { ScanButton } from '@/components/ScanButton';
 
 type RecordRow = { id: string; title: string; status: string; data: Record<string, any> };
 type FileRef = { id: string; name: string; mimeType: string };
@@ -34,7 +35,7 @@ export function RecordPaymentModal({ invoice, onClose, onSaved }: { invoice: Rec
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
-  async function handleFiles(files: FileList) {
+  async function handleFiles(files: FileList | File[]) {
     const list = Array.from(files);
     if (attachments.length + list.length > MAX_FILES) {
       setError(`You can upload a maximum of ${MAX_FILES} files`);
@@ -187,6 +188,9 @@ export function RecordPaymentModal({ invoice, onClose, onSaved }: { invoice: Rec
                     onChange={(e) => { const f = e.target.files; if (f && f.length) handleFiles(f); e.target.value = ''; }} />
                 </label>
               ) : null}
+              {!uploading && attachments.length < MAX_FILES && (
+                <ScanButton label="Payment Proof" disabled={saving} onScanned={(f) => handleFiles([f])} />
+              )}
             </div>
           </div>
 

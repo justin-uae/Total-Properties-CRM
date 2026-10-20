@@ -46,7 +46,7 @@ export type ModuleField = {
   groupFields?: { name: string; label: string }[];
   /** For type 'file'/'file-multi': restricts the accepted MIME types (client input + server-side upload validation). Defaults to PDF/JPG/PNG/WebP/GIF. */
   accept?: string[];
-  /** 'file' fields only: also offer a "Scan from scanner" button (components/ScanButton.tsx). */
+  /** For type 'file'/'file-multi': also offer a "Scan from scanner" button (components/ScanButton.tsx). */
   scan?: boolean;
   placeholder?: string;
   colSpan?: 1 | 2;
@@ -162,7 +162,7 @@ export const modules: ModuleConfig[] = [
       { name: 'amount', label: 'Amount', type: 'money', required: true },
       { name: 'validUntil', label: 'Valid Until', type: 'date' },
       { name: 'description', label: 'Proposal Details', type: 'textarea', colSpan: 2 },
-      { name: 'attachment', label: 'Attachment (PDF / Image)', type: 'file', colSpan: 2 }
+      { name: 'attachment', label: 'Attachment (PDF / Image)', type: 'file', colSpan: 2, scan: true }
     ]
   },
   {
@@ -435,7 +435,7 @@ export const modules: ModuleConfig[] = [
       { name: 'documentType', label: 'Document Type', type: 'select', options: ['Trade Licence', 'Passport', 'Emirates ID', 'Contract', 'Lease Agreement', 'Tenancy Contract', 'Payment Receipt', 'Other'] },
       { name: 'documentNumber', label: 'Document Number', type: 'text' },
       { name: 'expiryDate', label: 'Expiry Date', type: 'date' },
-      { name: 'file', label: 'Upload Documents', type: 'file-multi' },
+      { name: 'file', label: 'Upload Documents', type: 'file-multi', scan: true },
       { name: 'notes', label: 'Notes', type: 'textarea', colSpan: 2 }
     ]
   },
@@ -558,7 +558,7 @@ export const modules: ModuleConfig[] = [
       { name: 'depositTo', label: 'Deposit To', type: 'select', options: ['Petty Cash', 'Bank Account', 'Cash Drawer', 'Stripe'], required: true },
       { name: 'reference', label: 'Reference#', type: 'text' },
       { name: 'notes', label: 'Notes', type: 'textarea', colSpan: 2 },
-      { name: 'attachments', label: 'Attachments', type: 'file-multi', colSpan: 2 }
+      { name: 'attachments', label: 'Attachments', type: 'file-multi', colSpan: 2, scan: true }
     ]
   },
   {

@@ -5,6 +5,7 @@ import { FileText, Plus, Trash2, Upload, X } from 'lucide-react';
 import { Combobox } from '@/components/ui/Combobox';
 import { sortOptions } from '@/lib/sort';
 import { Spinner } from '@/components/ui/Spinner';
+import { ScanButton } from '@/components/ScanButton';
 import { currency, invalidEmail, splitEmails } from '@/lib/utils';
 import { computeInvoiceTotals, emptyInvoiceItem, InvoiceItem, lineAmounts } from '@/lib/invoice-calc';
 
@@ -405,12 +406,15 @@ export function QuotationForm({
             <span className="text-sm text-slate-500">Uploading…</span>
           </div>
         ) : (
-          <label className="flex cursor-pointer items-center gap-3 rounded-xl border-2 border-dashed border-slate-200 bg-slate-50 p-4 text-center transition hover:border-[rgb(var(--accent))]">
-            <Upload className="h-5 w-5 shrink-0 text-slate-400" />
-            <span className="text-sm text-slate-600">Click to attach a file (PDF, JPG, PNG, WebP — max 10 MB) — will be emailed with the quotation</span>
-            <input type="file" className="sr-only" accept=".pdf,.jpg,.jpeg,.png,.webp,.gif"
-              onChange={(e) => { const f = e.target.files?.[0]; if (f) handleAttachmentUpload(f); }} />
-          </label>
+          <div className="space-y-2">
+            <label className="flex cursor-pointer items-center gap-3 rounded-xl border-2 border-dashed border-slate-200 bg-slate-50 p-4 text-center transition hover:border-[rgb(var(--accent))]">
+              <Upload className="h-5 w-5 shrink-0 text-slate-400" />
+              <span className="text-sm text-slate-600">Click to attach a file (PDF, JPG, PNG, WebP — max 10 MB) — will be emailed with the quotation</span>
+              <input type="file" className="sr-only" accept=".pdf,.jpg,.jpeg,.png,.webp,.gif"
+                onChange={(e) => { const f = e.target.files?.[0]; if (f) handleAttachmentUpload(f); }} />
+            </label>
+            <ScanButton label="Quotation Attachment" onScanned={handleAttachmentUpload} />
+          </div>
         )}
       </div>
 
