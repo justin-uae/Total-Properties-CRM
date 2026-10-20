@@ -13,6 +13,7 @@ import { ImportModal } from '@/components/ImportModal';
 import { IMPORTABLE_MODULES } from '@/lib/import-modules';
 import { MaintenanceDetail } from '@/components/MaintenanceDetail';
 import { RecordPaymentModal } from '@/components/RecordPaymentModal';
+import { ScanButton } from '@/components/ScanButton';
 import { AlertTriangle, Bell, Check, CreditCard, Download, Eye, EyeOff, FileText, Plus, RefreshCw, Send, Trash2, Upload, X as XIcon } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 
@@ -518,7 +519,7 @@ export function ModulePage({ slug, canInvoice = true }: { slug: string; canInvoi
                         <span className="text-sm text-slate-500">Uploading…</span>
                       </div>
                     );
-                    return (
+                    const uploadBox = (
                       <label className="flex cursor-pointer flex-col items-center gap-3 rounded-xl border-2 border-dashed border-slate-200 bg-slate-50 p-6 text-center transition hover:border-[rgb(var(--accent))]">
                         <Upload className="h-7 w-7 text-slate-400" />
                         <div>
@@ -528,6 +529,13 @@ export function ModulePage({ slug, canInvoice = true }: { slug: string; canInvoi
                         <input type="file" className="sr-only" accept={acceptAttr(field.accept)} disabled={saving}
                           onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFileUpload(field.name, f); }} />
                       </label>
+                    );
+                    if (!field.scan) return uploadBox;
+                    return (
+                      <div className="space-y-2">
+                        {uploadBox}
+                        <ScanButton label={field.label} disabled={saving} onScanned={(f) => handleFileUpload(field.name, f)} />
+                      </div>
                     );
                   })()
                 ) : field.type === 'file-multi' ? (

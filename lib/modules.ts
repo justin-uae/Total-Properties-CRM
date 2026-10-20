@@ -46,6 +46,8 @@ export type ModuleField = {
   groupFields?: { name: string; label: string }[];
   /** For type 'file'/'file-multi': restricts the accepted MIME types (client input + server-side upload validation). Defaults to PDF/JPG/PNG/WebP/GIF. */
   accept?: string[];
+  /** 'file' fields only: also offer a "Scan from scanner" button (components/ScanButton.tsx). */
+  scan?: boolean;
   placeholder?: string;
   colSpan?: 1 | 2;
   /** Forces this field to start a fresh row (left column) in the 2-column form grid, regardless of how many fields precede it — use to keep a pair of colSpan:1 fields (e.g. two side-by-side attachments) reliably aligned instead of depending on field-count parity. */
@@ -413,8 +415,8 @@ export const modules: ModuleConfig[] = [
       { name: 'expiryReminderAt', label: 'Expiry Reminder', type: 'date' },
       { name: 'monthlyRent', label: 'Monthly Rent', type: 'money' },
       { name: 'depositAmount', label: 'Deposit Amount', type: 'money' },
-      { name: 'contractDocument', label: 'Contract Document (to send)', type: 'file', colSpan: 2, accept: ['application/pdf'] },
-      { name: 'signedDocument', label: 'Signed Contract (uploaded or e-signed by tenant)', type: 'file', colSpan: 2 },
+      { name: 'contractDocument', label: 'Contract Document (to send)', type: 'file', colSpan: 2, accept: ['application/pdf'], scan: true },
+      { name: 'signedDocument', label: 'Signed Contract (uploaded or e-signed by tenant)', type: 'file', colSpan: 2, scan: true },
       { name: 'notes', label: 'Notes', type: 'textarea', colSpan: 2 }
     ]
   },
@@ -478,8 +480,8 @@ export const modules: ModuleConfig[] = [
       { name: 'chequeNumber', label: 'Cheque Number', type: 'text', required: true },
       { name: 'bankName', label: 'Bank Name (on Cheque)', type: 'text', required: true },
       { name: 'chequeAccountName', label: 'Cheque Account Name', type: 'text' },
-      { name: 'chequeReceipt', label: 'Cheque Receipt', type: 'file', newRow: true },
-      { name: 'scannedCheque', label: 'Scanned Cheque', type: 'file' },
+      { name: 'chequeReceipt', label: 'Cheque Receipt', type: 'file', newRow: true, scan: true },
+      { name: 'scannedCheque', label: 'Scanned Cheque', type: 'file', scan: true },
       { name: 'notes', label: 'Notes', type: 'textarea', colSpan: 2 }
     ]
   },
