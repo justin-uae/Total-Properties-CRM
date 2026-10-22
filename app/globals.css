@@ -51,3 +51,8 @@ body {
   background-size: 200% 100%;
   animation: shimmer 1.4s ease-in-out infinite;
 }
+
+/* Report charts (components/ReportPage.tsx). Series colours are a validated categorical
+   pair (blue / orange); the dark theme gets its own steps, not an automatic flip. */
+.viz-root { --viz-series-1: #2a78d6; --viz-series-2: #eb6834; --viz-grid: #eef0f3; --viz-axis: #cbd5e1; --viz-text-muted: #64748b; --viz-hover: rgba(148, 163, 184, 0.12); }
+[data-theme='dark-mode'] .viz-root { --viz-series-1: #3987e5; --viz-series-2: #d95926; --viz-grid: #1e293b; --viz-axis: #334155; --viz-text-muted: #94a3b8; --viz-hover: rgba(148, 163, 184, 0.10); }

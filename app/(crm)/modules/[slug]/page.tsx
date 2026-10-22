@@ -2,6 +2,8 @@ import { ModulePage } from '@/components/ModulePage';
 import { CalendarView } from '@/components/CalendarView';
 import { SettingsPage } from '@/components/SettingsPage';
 import { ReceptionDashboard } from '@/components/ReceptionDashboard';
+import { ReportPage } from '@/components/ReportPage';
+import { isReportKey } from '@/lib/report-types';
 import { moduleMap } from '@/lib/modules';
 import { can, requireUser } from '@/lib/auth';
 import { navHiddenModules } from '@/lib/roleNav';
@@ -20,6 +22,7 @@ export default async function Page({ params }: { params: Promise<{ slug: string 
   if ((navHiddenModules[user.role] || []).includes(slug) || !can(user, slug, PermissionAction.VIEW)) notFound();
   if (slug === 'calendar') return <CalendarView />;
   if (slug === 'reception-dashboard') return <ReceptionDashboard />;
+  if (isReportKey(slug)) return <ReportPage report={slug} />;
   if (slug === 'settings') {
     if (user.role !== 'MASTER_ADMIN') notFound();
     return <SettingsPage />;

@@ -21,7 +21,11 @@ import {
   Map,
   BriefcaseBusiness,
   Settings,
-  Banknote
+  Banknote,
+  BarChart3,
+  Building,
+  FileBarChart,
+  Wallet
 } from 'lucide-react';
 
 export type FieldType = 'text' | 'email' | 'tel' | 'number' | 'money' | 'textarea' | 'select' | 'date' | 'time' | 'datetime' | 'checkbox' | 'checkbox-group' | 'file' | 'file-multi' | 'password';
@@ -58,7 +62,7 @@ export type ModuleConfig = {
   slug: string;
   title: string;
   singular: string;
-  group: 'Dashboard' | 'Sales' | 'Operations' | 'Spaces' | 'Clients' | 'Finance' | 'Admin';
+  group: 'Dashboard' | 'Sales' | 'Operations' | 'Spaces' | 'Clients' | 'Finance' | 'Reports / Accounting' | 'Admin';
   description: string;
   icon: any;
   defaultStatus?: string;
@@ -611,6 +615,56 @@ export const modules: ModuleConfig[] = [
     tableFields: [],
     systemOnly: true
   },
+  // Reports / Accounting — read-only views built from the records above (lib/reports.ts,
+  // rendered by components/ReportPage.tsx). Master Admin only: no role is granted them.
+  {
+    slug: 'report-accounting',
+    title: 'Accounting Report',
+    singular: 'Accounting Report',
+    group: 'Reports / Accounting',
+    description: 'Revenue, money collected, pending and overdue payments, and income by month.',
+    icon: BarChart3,
+    statuses: [],
+    fields: [],
+    tableFields: [],
+    systemOnly: true
+  },
+  {
+    slug: 'report-occupancy',
+    title: 'Office Occupancy Report',
+    singular: 'Office Occupancy Report',
+    group: 'Reports / Accounting',
+    description: 'Occupied and available offices, occupancy percentage and a breakdown by building.',
+    icon: Building,
+    statuses: [],
+    fields: [],
+    tableFields: [],
+    systemOnly: true
+  },
+  {
+    slug: 'report-contracts',
+    title: 'Contract Report',
+    singular: 'Contract Report',
+    group: 'Reports / Accounting',
+    description: 'Active, new, renewed and expired contracts, and renewals coming up.',
+    icon: FileBarChart,
+    statuses: [],
+    fields: [],
+    tableFields: [],
+    systemOnly: true
+  },
+  {
+    slug: 'report-payments',
+    title: 'Payment Report',
+    singular: 'Payment Report',
+    group: 'Reports / Accounting',
+    description: 'Collected, pending and overdue payments, and upcoming cheques.',
+    icon: Wallet,
+    statuses: [],
+    fields: [],
+    tableFields: [],
+    systemOnly: true
+  },
   {
     slug: 'staff-users',
     title: 'Staff Users',
@@ -645,4 +699,4 @@ export const modules: ModuleConfig[] = [
 
 export const moduleMap = Object.fromEntries(modules.map((m) => [m.slug, m]));
 
-export const moduleGroups = ['Dashboard', 'Sales', 'Operations', 'Spaces', 'Clients', 'Finance', 'Admin'] as const;
+export const moduleGroups = ['Dashboard', 'Sales', 'Operations', 'Spaces', 'Clients', 'Finance', 'Reports / Accounting', 'Admin'] as const;
